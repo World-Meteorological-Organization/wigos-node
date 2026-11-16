@@ -41,7 +41,7 @@ const linkSummary = (l) => l.title || l.href;
 import { computed, provide, ref } from "vue";
 import { WIGOS_ID_PATTERN, buildWmdrRecord, parseWmdrRecord, duplicateWigosIds } from "../wmdr";
 import { validateWmdrRecord } from "../wmdrSchema";
-import { saveStation, getStation, getStationByWsi, getCodelist } from "../api";
+import { saveStation, getStation, getStationByWsi, getCodelist, listMyIssuers } from "../api";
 import { READONLY } from "./readonly";
 import { useWigosIdAvailability } from "../composables/useWigosIdAvailability";
 import { STATION_TIME_FIELDS, LINK_FIELDS } from "../fieldDefs";
@@ -61,6 +61,8 @@ import MapPreview from "./MapPreview.vue";
 const props = defineProps({
   stationId: { type: [String, Number], default: null },
   wsi: { type: String, default: null },
+  // Superusers may use any issuer; others only those of their groups.
+  anyIssuer: Boolean,
 });
 const emit = defineEmits(["saved", "cancel"]);
 
@@ -86,6 +88,13 @@ const comparable = (state) => JSON.stringify(buildWmdrRecord(state, { now: COMPA
 getCodelist("FacilityType").then((options) => (facilityTypes.value = options)).catch(() => {});
 getCodelist("WMORegion").then((options) => (wmoRegions.value = options)).catch(() => {});
 getCodelist("ISO3166").then((options) => (issuerCountries.value = options)).catch(() => {});
+// The issuers the user may choose; null (all) if it can't be loaded, as saving re-checks.
+const myIssuers = ref(null);
+if (!readonly && !props.anyIssuer) {
+  listMyIssuers()
+    .then(({ issuer_of_identifiers }) => (myIssuers.value = new Set(issuer_of_identifiers)))
+    .catch(() => {});
+}
 getCodelist("TerritoryName")
   .then((options) => (territoryNames.value = [...options].sort((a, b) => a.label.localeCompare(b.label))))
   .catch(() => {});
@@ -167,7 +176,7 @@ const submitLabel = computed(() => (isEditing ? "Save changes" : "Save WMDR reco
           <h3 class="section-title">Identification</h3>
           <div class="wigos-id-box">
             <div class="group-label">WIGOS station identifier<span class="required-mark">*</span></div>
-            <WigosIdInput v-model="form.id" :issuer-countries="issuerCountries" :disabled="isEditing && !readonly" />
+            <WigosIdInput v-model="form.id" :issuer-countries="issuerCountries" :allowed-issuers="myIssuers" :disabled="isEditing && !readonly" />
             <WigosIdFeedback :id="form.id" :status="idStatusOf(form.id)" :duplicate="duplicateIds.has(form.id)" />
 
             <div class="mt-4">
@@ -175,6 +184,7 @@ const submitLabel = computed(() => (isEditing ? "Save changes" : "Save WMDR reco
                 v-model="form.additionalIds"
                 label="Additional WIGOS identifiers"
                 :issuer-countries="issuerCountries"
+                :allowed-issuers="myIssuers"
                 :status-of="idStatusOf"
                 :duplicates="duplicateIds"
               />

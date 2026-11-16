@@ -7,6 +7,8 @@ import { useReadonly } from "./readonly";
 // the issuer country from ISO3166, the issue number and the local identifier.
 const props = defineProps({
   issuerCountries: { type: Array, required: true },
+  // Issuer numbers that can be chosen; null for all. The current one always shows.
+  allowedIssuers: { type: Set, default: null },
   disabled: Boolean,
   labelPrefix: { type: String, default: "" },
 });
@@ -19,10 +21,9 @@ const setPart = (part, text) => {
 };
 
 const issuerItems = computed(() =>
-  props.issuerCountries.map((country) => ({
-    title: `${country.code} — ${country.label}`,
-    value: String(Number(country.code)),
-  }))
+  props.issuerCountries
+    .map((country) => ({ title: `${country.code} — ${country.label}`, value: String(Number(country.code)) }))
+    .filter((item) => !props.allowedIssuers || props.allowedIssuers.has(Number(item.value)) || item.value === parts.value.issuer)
 );
 </script>
 

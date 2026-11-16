@@ -8,11 +8,10 @@ import { listMyStations } from "../api";
 
 vi.mock("../api", () => ({ listMyStations: vi.fn(), readLink: (wsi) => `/read/${wsi}` }));
 
-// The statuses of Alpha and Beta; Gamma can't be edited, so it never has one.
+// The statuses of Alpha and Beta.
 const stationsWith = (alpha, beta = "processed") => [
-  { station_id: 1, wsi: "0-756-0-a", name: "Alpha", latitude: 1, longitude: 2, can_edit: true, publication_status: alpha },
-  { station_id: 2, wsi: "0-756-0-b", name: "Beta", latitude: 1, longitude: 2, can_edit: true, publication_status: beta },
-  { station_id: 3, wsi: "0-76-0-c", name: "Gamma", latitude: 1, longitude: 2, can_edit: false, publication_status: null },
+  { station_id: 1, wsi: "0-756-0-a", name: "Alpha", latitude: 1, longitude: 2, publication_status: alpha },
+  { station_id: 2, wsi: "0-756-0-b", name: "Beta", latitude: 1, longitude: 2, publication_status: beta },
 ];
 
 let wrapper;
@@ -55,17 +54,11 @@ describe("StationsList publishing status", () => {
     expect(row("Alpha").find(".v-chip").text()).toBe("Unknown");
   });
 
-  it("shows no chip for a station the user can't edit", async () => {
-    listMyStations.mockResolvedValue(stationsWith("processed"));
-    await mountList();
-    expect(row("Gamma").find(".v-chip").exists()).toBe(false);
-  });
-
   it("links every station to its read-only view", async () => {
     listMyStations.mockResolvedValue(stationsWith("processed"));
     await mountList();
-    const view = row("Gamma").findAll("a").find((a) => a.text() === "View");
-    expect(view.attributes("href")).toBe("/read/0-76-0-c");
+    const view = row("Beta").findAll("a").find((a) => a.text() === "View");
+    expect(view.attributes("href")).toBe("/read/0-756-0-b");
   });
 
   it("shows why the stations couldn't be loaded", async () => {
@@ -82,7 +75,7 @@ describe("StationsList publishing status", () => {
     listMyStations.mockRejectedValue(new Error("nope"));
     await vi.advanceTimersByTimeAsync(5000);
 
-    expect(wrapper.findAll("tbody tr")).toHaveLength(3);
+    expect(wrapper.findAll("tbody tr")).toHaveLength(2);
     expect(row("Alpha").find(".v-chip").text()).toBe("Pending");
     expect(wrapper.text()).not.toContain("nope");
   });

@@ -221,14 +221,14 @@ class PublicationsApiTestCase(APITestCase):
         self.client.force_authenticate(self.author)
         self.assertEqual(self.client.get(reverse("publication-retry", args=[station.pk])).status_code, 405)
 
-    def test_my_stations_gives_the_status_only_to_those_who_can_edit(self):
+    def test_my_stations_lists_the_status_only_to_those_who_can_edit(self):
         station = self.create("0-756-0-uc19")
         self.set_status(station, Status.FAILED)
 
         def status_for(user):
             self.client.force_authenticate(user)
             stations_listed = self.client.get(reverse("my_stations")).json()
-            return {s["station_id"]: s["publication_status"] for s in stations_listed}[station.pk]
+            return {s["station_id"]: s["publication_status"] for s in stations_listed}.get(station.pk)
 
         self.assertEqual(status_for(self.colleague), "failed")
         self.assertIsNone(status_for(self.foreigner))

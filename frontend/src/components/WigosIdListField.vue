@@ -8,6 +8,7 @@ import { useReadonly } from "./readonly";
 defineProps({
   label: { type: String, required: true },
   issuerCountries: { type: Array, required: true },
+  allowedIssuers: { type: Set, default: null },
   statusOf: { type: Function, required: true },
   duplicates: { type: Set, required: true },
 });
@@ -33,6 +34,7 @@ const remove = (index) => {
         <WigosIdInput
           :model-value="value"
           :issuer-countries="issuerCountries"
+          :allowed-issuers="allowedIssuers"
           :label-prefix="`${label} ${i + 1}: `"
           @update:model-value="(next) => update(i, next)"
         />

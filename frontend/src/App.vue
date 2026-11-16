@@ -126,6 +126,7 @@ async function handleLogout() {
             v-else-if="view.mode === 'new' || view.mode === 'edit'"
             :key="view.mode === 'edit' ? view.stationId : 'new'"
             :station-id="view.mode === 'edit' ? view.stationId : null"
+            :any-issuer="!!user?.is_superuser"
             @saved="view = { mode: 'list' }"
             @cancel="view = { mode: 'list' }"
           />

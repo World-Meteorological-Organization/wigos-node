@@ -56,7 +56,7 @@ def geojson(request):
 
 @api_view(["GET"])
 def my_stations(request):
-    my_stations = Station.objects.filter(wmdrv2__isnull=False) # return all stations in the meantime
+    """The stations the user can edit."""
     editable = stations.editable_station_ids(request.user)
     return Response([
         {
@@ -65,10 +65,9 @@ def my_stations(request):
             "name": station.name,
             "latitude": station.location.y,
             "longitude": station.location.x,
-            "can_edit": station.id in editable,
-            "publication_status": station.publication_status if station.id in editable else None,
+            "publication_status": station.publication_status,
         }
-        for station in my_stations
+        for station in Station.objects.filter(id__in=editable)
     ])
 
 @api_view(["GET"])

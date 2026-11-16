@@ -6,7 +6,7 @@ import StationsList from "./StationsList.vue";
 import StationsMap from "./StationsMap.vue";
 import { listMyStations } from "../api";
 
-vi.mock("../api", () => ({ listMyStations: vi.fn() }));
+vi.mock("../api", () => ({ listMyStations: vi.fn(), readLink: (wsi) => `/read/${wsi}` }));
 
 // The statuses of Alpha and Beta; Gamma can't be edited, so it never has one.
 const stationsWith = (alpha, beta = "processed") => [
@@ -59,6 +59,13 @@ describe("StationsList publishing status", () => {
     listMyStations.mockResolvedValue(stationsWith("processed"));
     await mountList();
     expect(row("Gamma").find(".v-chip").exists()).toBe(false);
+  });
+
+  it("links every station to its read-only view", async () => {
+    listMyStations.mockResolvedValue(stationsWith("processed"));
+    await mountList();
+    const view = row("Gamma").findAll("a").find((a) => a.text() === "View");
+    expect(view.attributes("href")).toBe("/read/0-76-0-c");
   });
 
   it("shows why the stations couldn't be loaded", async () => {

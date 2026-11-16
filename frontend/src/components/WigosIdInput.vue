@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from "vue";
 import { splitWigosId, joinWigosId } from "../wmdr";
+import { useReadonly } from "./readonly";
 
 // A WIGOS station identifier entered as its four parts: a fixed scheme (0),
 // the issuer country from ISO3166, the issue number and the local identifier.
@@ -10,6 +11,7 @@ const props = defineProps({
   labelPrefix: { type: String, default: "" },
 });
 const value = defineModel({ type: String, required: true });
+const readonly = useReadonly();
 
 const parts = computed(() => splitWigosId(value.value));
 const setPart = (part, text) => {
@@ -30,7 +32,7 @@ const issuerItems = computed(() =>
       class="wigos-id-scheme"
       label="Scheme"
       :model-value="parts.scheme"
-      disabled
+      :disabled="!readonly"
       :aria-label="`${labelPrefix}Identifier scheme`"
       title="Identifier scheme (always 0 for a WIGOS station identifier)"
     />

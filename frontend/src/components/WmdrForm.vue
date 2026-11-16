@@ -38,10 +38,11 @@ const linkSummary = (l) => l.title || l.href;
 </script>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, provide, ref } from "vue";
 import { WIGOS_ID_PATTERN, buildWmdrRecord, parseWmdrRecord, duplicateWigosIds } from "../wmdr";
 import { validateWmdrRecord } from "../wmdrSchema";
-import { saveStation, getStation, getCodelist } from "../api";
+import { saveStation, getStation, getStationByWsi, getCodelist } from "../api";
+import { READONLY } from "./readonly";
 import { useWigosIdAvailability } from "../composables/useWigosIdAvailability";
 import { STATION_TIME_FIELDS, LINK_FIELDS } from "../fieldDefs";
 import StringListField from "./StringListField.vue";
@@ -55,12 +56,17 @@ import ObjectArrayItemRow from "./ObjectArrayItemRow.vue";
 import ObservationsField from "./ObservationsField.vue";
 import MapPreview from "./MapPreview.vue";
 
-// Creates a station, or edits the one with `stationId`. The parent re-mounts
-// it (by key) for another station.
-const props = defineProps({ stationId: { type: [String, Number], default: null } });
+// Creates a station, edits the one with `stationId`, or shows the one with
+// `wsi` read-only. The parent re-mounts it (by key) for another station.
+const props = defineProps({
+  stationId: { type: [String, Number], default: null },
+  wsi: { type: String, default: null },
+});
 const emit = defineEmits(["saved", "cancel"]);
 
-const isEditing = props.stationId != null;
+const readonly = props.wsi != null;
+provide(READONLY, readonly);
+const isEditing = props.stationId != null || readonly;
 const form = ref(initialState());
 const submitState = ref({ status: "idle" });
 const loadState = ref({ status: isEditing ? "loading" : "idle" });
@@ -85,7 +91,7 @@ getCodelist("TerritoryName")
   .catch(() => {});
 
 if (isEditing) {
-  getStation(props.stationId)
+  (readonly ? getStationByWsi(props.wsi) : getStation(props.stationId))
     .then((record) => {
       const parsed = parseWmdrRecord(record);
       savedRecord.value = comparable(parsed);
@@ -156,12 +162,12 @@ const submitLabel = computed(() => (isEditing ? "Save changes" : "Save WMDR reco
 
   <v-row v-else>
     <v-col cols="12" md="7">
-      <v-form @submit.prevent="handleSubmit">
+      <v-form :readonly="readonly" @submit.prevent="handleSubmit">
         <v-card class="pa-6 mb-5">
           <h3 class="section-title">Identification</h3>
           <div class="wigos-id-box">
             <div class="group-label">WIGOS station identifier<span class="required-mark">*</span></div>
-            <WigosIdInput v-model="form.id" :issuer-countries="issuerCountries" :disabled="isEditing" />
+            <WigosIdInput v-model="form.id" :issuer-countries="issuerCountries" :disabled="isEditing && !readonly" />
             <WigosIdFeedback :id="form.id" :status="idStatusOf(form.id)" :duplicate="duplicateIds.has(form.id)" />
 
             <div class="mt-4">
@@ -246,10 +252,10 @@ const submitLabel = computed(() => (isEditing ? "Save changes" : "Save WMDR reco
             :item-summary="linkSummary"
             :path="[]"
           />
-          <p class="text-caption text-medium-emphasis">A link to this record on this node is added automatically.</p>
+          <p v-if="!readonly" class="text-caption text-medium-emphasis">A link to this record on this node is added automatically.</p>
         </v-card>
 
-        <div class="d-flex ga-3 align-center">
+        <div v-if="!readonly" class="d-flex ga-3 align-center">
           <v-btn
             type="submit"
             color="primary"

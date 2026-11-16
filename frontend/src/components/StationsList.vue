@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onUnmounted, ref } from "vue";
-import { listMyStations } from "../api";
+import { listMyStations, readLink } from "../api";
 import PublicationStatusChip from "./PublicationStatusChip.vue";
 import StationsMap from "./StationsMap.vue";
 import SelectionBar from "./SelectionBar.vue";
@@ -111,7 +111,10 @@ const rowProps = ({ item }) => ({ class: selectedIds.value.includes(item.station
           <PublicationStatusChip v-if="statuses[item.station_id] != null" :status="statuses[item.station_id]" />
         </template>
         <template #[`item.actions`]="{ item }">
-          <v-btn variant="tonal" color="secondary" size="small" @click="emit('edit', item.station_id)">Edit</v-btn>
+          <div class="d-flex ga-2">
+            <v-btn variant="tonal" color="secondary" size="small" @click="emit('edit', item.station_id)">Edit</v-btn>
+            <v-btn variant="tonal" color="grey-darken-1" size="small" :href="readLink(item.wsi)">View</v-btn>
+          </div>
         </template>
       </v-data-table>
     </template>

@@ -45,6 +45,18 @@ export async function getStation(stationId) {
   return data;
 }
 
+// The anonymous read-only view of a station's form (a frontend path, see App.vue).
+export const readLink = (wsi) => `/read/${encodeURIComponent(wsi)}`;
+
+export async function getStationByWsi(wsi) {
+  const res = await fetch(`${API_URL}/api/wmdrv2/wsi/${encodeURIComponent(wsi)}`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.detail || `API request failed: ${res.status}`);
+  }
+  return data;
+}
+
 // Returns { [stationId]: record } for the given stations; unknown IDs are left out.
 export async function getStations(stationIds) {
   const params = new URLSearchParams(stationIds.map((id) => ["station_id", id]));

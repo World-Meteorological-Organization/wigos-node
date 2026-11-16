@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { flushPromises, mount } from "@vue/test-utils";
 import { createVuetify } from "vuetify";
 import WmdrForm from "./WmdrForm.vue";
-import { getCodelist, getStation } from "../api";
+import { getCodelist, getStation, getStationByWsi } from "../api";
 import { buildWmdrRecord, parseWmdrRecord } from "../wmdr";
 import allFields from "../__fixtures__/all-fields.json";
 
@@ -14,6 +14,7 @@ import allFields from "../__fixtures__/all-fields.json";
 vi.mock("../api", () => ({
   getCodelist: vi.fn(),
   getStation: vi.fn(),
+  getStationByWsi: vi.fn(),
   saveStation: vi.fn(),
   checkWigosIdentifiers: vi.fn(() => Promise.resolve({})),
 }));
@@ -83,6 +84,20 @@ describe("WmdrForm", () => {
     expect(shown).toEqual(expected);
     // The primary ID can't change while editing.
     expect(inputByLabel("Local identifier").attributes("disabled")).toBeDefined();
+    expect(vueWarnings()).toEqual([]);
+  });
+
+  it("shows a station by WIGOS ID read-only", async () => {
+    getStationByWsi.mockResolvedValue(allFields);
+    mountForm({ wsi: allFields.id });
+    await flushPromises();
+
+    expect(getStationByWsi).toHaveBeenCalledWith(allFields.id);
+    expect(inputByLabel("Title *").element.value).toBe(allFields.properties.title);
+    expect(inputByLabel("Title *").attributes("readonly")).toBeDefined();
+    const buttons = wrapper.findAll("button").map((b) => b.text());
+    expect(buttons.filter((text) => /^(Save|Cancel|Remove|Add)/.test(text))).toEqual([]);
+    expect(wrapper.find(".v-field__clearable").exists()).toBe(false);
     expect(vueWarnings()).toEqual([]);
   });
 

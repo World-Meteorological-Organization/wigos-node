@@ -29,6 +29,7 @@ function emptyItem(fields) {
 import { computed, inject, ref } from "vue";
 import ObjectArrayItemRow from "./ObjectArrayItemRow.vue";
 import { DRILL_INTO } from "./drillInto";
+import { useReadonly } from "./readonly";
 import { useAutoCollapse } from "../composables/useAutoCollapse";
 
 // A list of objects. In "full" mode each item is a card edited inline; in
@@ -46,6 +47,7 @@ const props = defineProps({
 });
 const values = defineModel({ type: Array, required: true });
 const drillInto = inject(DRILL_INTO, null);
+const readonly = useReadonly();
 
 // All items start collapsed when the form first loads. Items added later
 // via "Add" are not in this set, so they start expanded for editing.
@@ -109,9 +111,9 @@ const atMax = computed(() => props.maxItems != null && values.value.length >= pr
             append-icon="mdi-chevron-right"
             @click="drillInto([...path, i], `${itemLabel} ${i + 1}`, fields)"
           >
-            Edit details
+            {{ readonly ? "Details" : "Edit details" }}
           </v-btn>
-          <v-btn variant="outlined" size="small" @click="remove(i)">Remove</v-btn>
+          <v-btn v-if="!readonly" variant="outlined" size="small" @click="remove(i)">Remove</v-btn>
         </div>
       </div>
     </template>
@@ -124,7 +126,7 @@ const atMax = computed(() => props.maxItems != null && values.value.length >= pr
             <v-btn variant="outlined" size="small" :aria-expanded="!collapsed.has(i)" @click="toggleCollapsed(i)">
               {{ collapsed.has(i) ? "Expand" : "Minimize" }}
             </v-btn>
-            <v-btn variant="outlined" size="small" @click="remove(i)">Remove</v-btn>
+            <v-btn v-if="!readonly" variant="outlined" size="small" @click="remove(i)">Remove</v-btn>
           </div>
         </div>
         <ObjectArrayItemRow
@@ -137,7 +139,7 @@ const atMax = computed(() => props.maxItems != null && values.value.length >= pr
       </div>
     </template>
 
-    <v-btn v-if="!atMax" variant="tonal" color="secondary" size="small" prepend-icon="mdi-plus" @click="add">
+    <v-btn v-if="!atMax && !readonly" variant="tonal" color="secondary" size="small" prepend-icon="mdi-plus" @click="add">
       Add {{ itemLabel }}
     </v-btn>
   </div>

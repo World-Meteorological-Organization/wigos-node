@@ -10,8 +10,16 @@ import { useAuth } from "./composables/useAuth";
 
 const { status, user, setUser, logout } = useAuth();
 
-// { mode: "list" | "new" | "edit" | "batch" | "publications", stationId?, stationIds? }
-const view = ref({ mode: "list" });
+// { mode: "list" | "new" | "edit" | "read" | "batch" | "publications", stationId?, wsi?, stationIds? }
+// /read/<wsi> opens a station read-only (after login, like the editor).
+const readMatch = window.location.pathname.match(/^\/read\/([^/]+)\/?$/);
+const readWsi = readMatch && decodeURIComponent(readMatch[1]);
+const view = ref(readWsi ? { mode: "read", wsi: readWsi } : { mode: "list" });
+
+function leaveRead() {
+  window.history.replaceState(null, "", "/");
+  view.value = { mode: "list" };
+}
 // Station IDs ticked in the list; kept here so they survive the batch wizard.
 const selected = ref(new Set());
 
@@ -53,6 +61,7 @@ onUnmounted(() => clearInterval(failuresTimer));
 
 async function handleLogout() {
   await logout();
+  window.history.replaceState(null, "", "/");
   view.value = { mode: "list" };
   selected.value = new Set();
   failures.value = 0;
@@ -120,6 +129,7 @@ async function handleLogout() {
             @saved="view = { mode: 'list' }"
             @cancel="view = { mode: 'list' }"
           />
+          <WmdrForm v-else-if="view.mode === 'read'" :key="view.wsi" :wsi="view.wsi" @cancel="leaveRead" />
           <!-- Only the stations that failed stay selected after applying. -->
           <BatchWizard
             v-else-if="view.mode === 'batch'"

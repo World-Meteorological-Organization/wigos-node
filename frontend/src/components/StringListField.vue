@@ -1,4 +1,6 @@
 <script setup>
+import { useReadonly } from "./readonly";
+
 // A list of strings that always keeps at least one (possibly empty) entry.
 defineProps({
   label: { type: String, required: true },
@@ -6,6 +8,7 @@ defineProps({
   required: Boolean,
 });
 const values = defineModel({ type: Array, required: true });
+const readonly = useReadonly();
 
 const update = (index, value) => {
   values.value = values.value.map((v, i) => (i === index ? value : v));
@@ -31,8 +34,8 @@ const remove = (index) => {
         :aria-label="`${label} ${i + 1}`"
         @update:model-value="(next) => update(i, next)"
       />
-      <v-btn variant="outlined" :disabled="values.length <= 1" @click="remove(i)">Remove</v-btn>
+      <v-btn v-if="!readonly" variant="outlined" :disabled="values.length <= 1" @click="remove(i)">Remove</v-btn>
     </div>
-    <v-btn variant="tonal" color="secondary" size="small" prepend-icon="mdi-plus" @click="add">Add</v-btn>
+    <v-btn v-if="!readonly" variant="tonal" color="secondary" size="small" prepend-icon="mdi-plus" @click="add">Add</v-btn>
   </div>
 </template>

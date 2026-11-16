@@ -4,7 +4,7 @@ const initialState = () => ({
   latitude: "",
   longitude: "",
   height: "",
-  time: { date: "", timestamp: "", intervalStart: "", intervalEnd: "", resolution: "" },
+  time: { intervalStart: "", intervalEnd: "", resolution: "" },
   title: "",
   description: "",
   additionalTitles: [""],

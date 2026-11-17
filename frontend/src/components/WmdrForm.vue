@@ -133,6 +133,13 @@ const valid = computed(() => schemaValid.value && !idsBlocked.value);
 const recordJson = computed(() => JSON.stringify(record.value, null, 2));
 const unchanged = computed(() => savedRecord.value !== null && savedRecord.value === comparable(form.value));
 
+const copied = ref(false);
+async function copyPreview() {
+  await navigator.clipboard.writeText(recordJson.value);
+  copied.value = true;
+  setTimeout(() => (copied.value = false), 1500);
+}
+
 async function handleSubmit() {
   if (!valid.value || unchanged.value) return;
   submitState.value = { status: "loading" };
@@ -305,7 +312,19 @@ const submitLabel = computed(() => (isEditing ? "Save changes" : "Save WMDR reco
               <li v-for="error in schemaErrors" :key="error">{{ error }}</li>
             </ul>
           </v-alert>
-          <pre class="geojson-preview">{{ recordJson }}</pre>
+          <div class="preview-box">
+            <pre class="geojson-preview">{{ recordJson }}</pre>
+            <v-btn
+              class="copy-button"
+              :icon="copied ? 'mdi-check' : 'mdi-content-copy'"
+              :color="copied ? 'success' : 'grey-lighten-2'"
+              variant="tonal"
+              size="small"
+              :title="copied ? 'Copied' : 'Copy to clipboard'"
+              aria-label="Copy GeoJSON preview"
+              @click="copyPreview"
+            />
+          </div>
         </v-card>
       </div>
     </v-col>
@@ -345,6 +364,24 @@ const submitLabel = computed(() => (isEditing ? "Save changes" : "Save WMDR reco
   max-height: 160px;
   overflow: auto;
   font-size: 0.85rem;
+}
+
+.preview-box {
+  position: relative;
+}
+
+/* Faint so the JSON behind it stays readable; solid when hovered or focused. */
+.copy-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0.3;
+  transition: opacity 0.15s;
+}
+
+.copy-button:hover,
+.copy-button:focus-visible {
+  opacity: 1;
 }
 
 .geojson-preview {

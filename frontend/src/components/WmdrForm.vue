@@ -375,7 +375,7 @@ const submitLabel = computed(() => (isEditing ? "Save changes" : "Save WMDR reco
   position: absolute;
   top: 8px;
   right: 8px;
-  opacity: 0.3;
+  opacity: 0.6;
   transition: opacity 0.15s;
 }
 

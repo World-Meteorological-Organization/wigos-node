@@ -88,12 +88,12 @@
     "facilityType": {
       "id": "landFixed",
       "title": "Land (fixed)",
-      "url": "http://codes.wmo.int/wmdr/FacilityType/landFixed"
+      "url": "https://codes.wmo.int/wmdr/FacilityType/landFixed"
     },
     "wmoRegion": {
       "id": "europe",
       "title": "Europe",
-      "url": "http://codes.wmo.int/wmdr/WMORegion/europe"
+      "url": "https://codes.wmo.int/wmdr/WMORegion/europe"
     },
     "territories": [
       {
@@ -115,7 +115,7 @@
           "id": "12166",
           "title": "Air Temperature",
           "description": "Temperature of an air parcel. Note, temperature is a fundamental property of matter as defined in the SI system.",
-          "url": "http://codes.wmo.int/wmdr/ObservedVariableAtmosphere/12166"
+          "url": "https://codes.wmo.int/wmdr/ObservedVariableAtmosphere/12166"
         },
         "programAffiliations": [
           {

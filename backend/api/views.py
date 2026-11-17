@@ -5,6 +5,7 @@ from pathlib import Path
 import django.http
 from django.conf import settings
 from django.db import transaction
+from pywmdr.util import get_userdir
 from rest_framework import status
 from rest_framework.decorators import (
     api_view,
@@ -35,7 +36,11 @@ def health(request):
 
 
 def codelist(request, scheme):
-    path = Path(settings.BASE_DIR) / "api" / "codelists" / f"{scheme}.csv"
+    """A codelist from pywmdr's WMDS bundle (the ones validation uses), or one
+    committed in api/codelists (ISO3166)."""
+    path = get_userdir() / "wmds" / f"{scheme}.csv"
+    if not path.exists():
+        path = Path(settings.BASE_DIR) / "api" / "codelists" / f"{scheme}.csv"
     if not path.exists():
         return django.http.HttpResponseNotFound(f"No cached codelist for '{scheme}'")
     return django.http.HttpResponse(path.read_text(encoding="utf-8"), content_type="text/csv")

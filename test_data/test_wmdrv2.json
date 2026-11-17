@@ -28,19 +28,19 @@
         "facilityType": {
             "id": "landFixed",
             "title": "Land (fixed)",
-            "url": "http://codes.wmo.int/wmdr/FacilityType/landFixed"
+            "url": "https://codes.wmo.int/wmdr/FacilityType/landFixed"
         },
         "wmoRegion": {
             "id": "africa",
             "title": "Africa",
-            "url": "http://codes.wmo.int/wmdr/WMORegion/africa"
+            "url": "https://codes.wmo.int/wmdr/WMORegion/africa"
         },
         "observations": [
             {
                 "observedProperty": {
                     "id": "12166",
                     "title": "Air Temperature",
-                    "url": "http://codes.wmo.int/wmdr/ObservedVariableAtmosphere/12166"
+                    "url": "https://codes.wmo.int/wmdr/ObservedVariableAtmosphere/12166"
                 },
                 "programAffiliations": [
                     {

@@ -151,11 +151,19 @@ export async function getCodelist(scheme) {
   const text = await res.text();
   return parseCsv(text)
     .map((row) => ({
-      code: row["skos:notation"],
-      label: row["rdfs:label"] || row["skos:notation"],
-      id: (row["@id"] || "").replace(/^<|>$/g, ""),
-      // Stored as a quoted RDF literal with a language tag, e.g. 'Africa'@en.
-      description: (row["dct:description"] || "").replace(/@[A-Za-z-]+$/, "").replace(/^'([\s\S]*)'$/, "$1").trim(),
+      code: row.id,
+      label: row.title || row.id,
+      id: conceptUri(row.url, row.id),
+      description: (row.description || "").trim(),
     }))
     .filter((entry) => entry.code);
+}
+
+// WMDS rows give their codelist's URL (the concept is that URL plus its code);
+// other providers, like ISO3166, give the concept's own URI. Always https.
+export function conceptUri(url, code) {
+  if (!url || !code) return "";
+  const uri = url.replace(/^http:\/\//, "https://").replace(/\/+$/, "");
+  const isRegister = uri.startsWith("https://codes.wmo.int/") && !uri.endsWith(`/${code}`);
+  return isRegister ? `${uri}/${code}` : uri;
 }

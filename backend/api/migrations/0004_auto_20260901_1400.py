@@ -12,8 +12,8 @@ with open('/app/api/codelists/ISO3166.csv', 'r') as f:
     reader = csv.DictReader(f)
     for i, row in enumerate(reader):
         # Assuming 'name' column for country name, adjust as needed
-        name = row.get('rdfs:label', None)
-        iso_code = row.get('skos:notation', None)
+        name = row.get('title', None)
+        iso_code = row.get('id', None)
         if not name or not iso_code:
             logger.warning(f"Skipping row {i} due to missing data: {row}")
             continue  # Skip rows with missing data

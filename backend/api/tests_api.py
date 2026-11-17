@@ -159,11 +159,20 @@ class BatchAPITestCase(APITestCase):
         response = self.post_batch([invalid, self.update(self.stations[1], title='Valid')])
         first, second = response.json()['results']
         self.assertEqual(first['status'], 'error')
-        self.assertEqual(first['message'], 'The record is not valid against the WMDR2 schema.')
-        self.assertIn("/properties/observations/0/configurations/0: 'time' is a required property", first['errors'])
+        self.assertEqual(first['message'], 'The record is not valid WMDR2.')
+        self.assertIn("$.properties.observations[0].configurations[0]: 'time' is a required property", first['errors'])
         self.assertEqual(second['status'], 'ok')
         self.assertEqual(self.title_of(self.stations[0]), 'Batch 0')
         self.assertEqual(self.title_of(self.stations[1]), 'Valid')
+
+    def test_a_code_outside_the_wmds_codelists_is_rejected(self):
+        self.client.force_authenticate(self.owner)
+        invalid = self.update(self.stations[0], title='Invalid')
+        invalid['wmdrv2']['properties']['observations'][0]['observedProperty'] = {'id': 'not-a-variable'}
+        first, = self.post_batch([invalid]).json()['results']
+        self.assertEqual(first['status'], 'error')
+        self.assertEqual(first['errors'], ['Invalid codelist value for observedProperty'])
+        self.assertEqual(self.title_of(self.stations[0]), 'Batch 0')
 
     def test_station_without_permission_fails_alone(self):
         other = Station(wmdrv2=record(f'0-{ISSUER_A}-0-other'), owner=self.outsider)

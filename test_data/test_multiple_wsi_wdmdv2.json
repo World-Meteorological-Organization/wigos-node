@@ -168,7 +168,7 @@
                 "id": "m"
               },
               "referenceSurface": {
-                "id": "localGroundLevel"
+                "id": "naturalGround"
               }
             }
           }

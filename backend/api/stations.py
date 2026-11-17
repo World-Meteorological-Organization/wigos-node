@@ -1,18 +1,15 @@
-"""Rules shared by every endpoint that creates or changes a station: schema
-validation, the per-issuer group check and object permissions. The single
+"""Rules shared by every endpoint that creates or changes a station: WMDR2
+validation (pywmdr), the per-issuer group check and object permissions. The single
 station endpoints (views.Wmdrv2View) and the batch endpoint
 (views.Wmdrv2BatchView) both go through here, so they can't drift apart."""
 
-import json
 import logging
-from functools import cache
-from pathlib import Path
 
 from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.urls import reverse
 from guardian.shortcuts import assign_perm, get_objects_for_user
-from jsonschema import Draft202012Validator
+from pywmdr.wmdr2.ets import WMDR2TestSuite
 
 from publishing.base import Operation
 from publishing.tasks import request_publication
@@ -21,12 +18,10 @@ from .models import Station, WIGOSNodeGroup
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_PATH = Path(__file__).resolve().parent / "schemas" / "wmdr2-bundled.json"
-
 
 class StationError(Exception):
     """A station couldn't be created or changed. `status` is the HTTP status the
-    single-station endpoints answer with; `errors` lists schema failures."""
+    single-station endpoints answer with; `errors` lists validation failures."""
 
     def __init__(self, message, status=400, errors=None):
         super().__init__(message)
@@ -35,23 +30,16 @@ class StationError(Exception):
         self.errors = errors or []
 
 
-@cache
-def _validator():
-    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
-    # Format checking matches ajv-formats on the frontend.
-    return Draft202012Validator(schema, format_checker=Draft202012Validator.FORMAT_CHECKER)
-
-
-def _error_path(error):
-    return "/" + "/".join(str(part) for part in error.absolute_path)
-
-
 def validation_errors(wmdrv2):
-    """JSON Schema errors for a WMDR2 record, e.g.
-    "/properties/observations/0: 'configurations' is a required property".
-    Empty when the record is valid."""
-    errors = sorted(_validator().iter_errors(wmdrv2), key=lambda e: list(map(str, e.absolute_path)))
-    return [f"{_error_path(error)}: {error.message}" for error in errors]
+    """pywmdr's WMDR2 test suite: schema errors, e.g. "$.properties.observations[0]:
+    'configurations' is a required property", else codelist errors. Empty when valid."""
+    suite = WMDR2TestSuite(wmdrv2)
+    # The codelist test can't read a record the schema rejects.
+    for test in (suite.test_requirement_validation, suite.test_requirement_codelisted_values):
+        result = test()
+        if result["code"] == "FAILED":
+            return result["errors"]
+    return []
 
 
 def validate(wmdrv2):
@@ -59,7 +47,7 @@ def validate(wmdrv2):
         raise StationError("The record must be a JSON object.")
     errors = validation_errors(wmdrv2)
     if errors:
-        raise StationError("The record is not valid against the WMDR2 schema.", errors=errors)
+        raise StationError("The record is not valid WMDR2.", errors=errors)
 
 
 def issuer_of(wsi):

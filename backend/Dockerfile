@@ -11,6 +11,8 @@ RUN apt-get update \
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+# pywmdr's codelists (and a schema, replaced by ours in entrypoint.sh)
+RUN pywmdr bundle sync
 COPY --from=publishing requirements.txt /tmp/publishing-requirements.txt
 RUN pip install --no-cache-dir -r /tmp/publishing-requirements.txt
 

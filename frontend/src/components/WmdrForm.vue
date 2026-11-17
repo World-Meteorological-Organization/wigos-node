@@ -317,8 +317,9 @@ const submitLabel = computed(() => (isEditing ? "Save changes" : "Save WMDR reco
             <v-btn
               class="copy-button"
               :icon="copied ? 'mdi-check' : 'mdi-content-copy'"
-              :color="copied ? 'success' : 'grey-lighten-2'"
-              variant="tonal"
+              :color="copied ? 'success' : 'white'"
+              variant="flat"
+              elevation="2"
               size="small"
               :title="copied ? 'Copied' : 'Copy to clipboard'"
               aria-label="Copy GeoJSON preview"
@@ -374,7 +375,7 @@ const submitLabel = computed(() => (isEditing ? "Save changes" : "Save WMDR reco
 .copy-button {
   position: absolute;
   top: 8px;
-  right: 8px;
+  right: 24px; /* clears the preview's scrollbar */
   opacity: 0.6;
   transition: opacity 0.15s;
 }

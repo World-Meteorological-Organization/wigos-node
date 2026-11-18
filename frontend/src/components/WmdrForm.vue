@@ -171,7 +171,7 @@ const submitLabel = computed(() => (isEditing ? "Save changes" : "Save WMDR reco
   <!-- Keeps the floating button from covering the top of the form before scrolling. -->
   <div class="back-button-spacer" />
 
-  <v-card v-if="isEditing && loadState.status === 'loading'" class="pa-6">Loading station...</v-card>
+  <v-card v-if="isEditing && loadState.status === 'loading'" class="pa-4 pa-sm-6">Loading station...</v-card>
   <v-alert v-else-if="isEditing && loadState.status === 'error'" type="error" variant="tonal">
     Error: {{ loadState.error }}
   </v-alert>
@@ -179,7 +179,7 @@ const submitLabel = computed(() => (isEditing ? "Save changes" : "Save WMDR reco
   <v-row v-else>
     <v-col cols="12" md="7">
       <v-form :readonly="readonly" @submit.prevent="handleSubmit">
-        <v-card class="pa-6 mb-5">
+        <v-card class="pa-4 pa-sm-6 mb-5">
           <h3 class="section-title">Identification</h3>
           <div class="wigos-id-box">
             <div class="group-label">WIGOS station identifier<span class="required-mark">*</span></div>
@@ -222,7 +222,7 @@ const submitLabel = computed(() => (isEditing ? "Save changes" : "Save WMDR reco
           </div>
         </v-card>
 
-        <v-card class="pa-6 mb-5">
+        <v-card class="pa-4 pa-sm-6 mb-5">
           <h3 class="section-title">Properties</h3>
           <v-text-field v-model="form.title" class="mb-3" label="Title *" />
           <v-textarea v-model="form.description" class="mb-4" label="Description" rows="3" auto-grow />
@@ -259,7 +259,7 @@ const submitLabel = computed(() => (isEditing ? "Save changes" : "Save WMDR reco
           <ObservationsField v-model="form.observations" />
         </v-card>
 
-        <v-card class="pa-6 mb-5">
+        <v-card class="pa-4 pa-sm-6 mb-5">
           <h3 class="section-title">Links</h3>
           <ObjectArrayField
             v-model="form.links"
@@ -297,11 +297,11 @@ const submitLabel = computed(() => (isEditing ? "Save changes" : "Save WMDR reco
 
     <v-col cols="12" md="5">
       <div class="sticky-col">
-        <v-card class="pa-6 mb-5">
+        <v-card class="pa-4 pa-sm-6 mb-5">
           <h3 class="section-title">Map</h3>
           <MapPreview :latitude="form.latitude" :longitude="form.longitude" />
         </v-card>
-        <v-card class="pa-6">
+        <v-card class="pa-4 pa-sm-6">
           <h3 class="section-title">GeoJSON preview</h3>
           <v-alert v-if="schemaValid" type="success" variant="tonal" density="compact">
             Valid against the WMDR2 schema.

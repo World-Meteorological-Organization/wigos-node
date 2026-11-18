@@ -11,7 +11,7 @@ const selected = defineModel("selected", { type: Set, required: true });
 const emit = defineEmits(["new", "edit", "batch", "changed"]);
 
 const HEADERS = [
-  { title: "WIGOS identifier", key: "wsi" },
+  { title: "WIGOS identifier", key: "wsi", cellProps: { class: "text-no-wrap" } },
   { title: "Name", key: "name" },
   { title: "Publishing", key: "publishing", sortable: false },
   { title: "", key: "actions", sortable: false, align: "end" },
@@ -66,7 +66,7 @@ const rowProps = ({ item }) => ({ class: selectedIds.value.includes(item.station
 </script>
 
 <template>
-  <v-card class="pa-6">
+  <v-card class="pa-4 pa-sm-6">
     <div class="list-header">
       <h3>My stations</h3>
       <v-btn color="primary" prepend-icon="mdi-plus" @click="emit('new')">New station</v-btn>

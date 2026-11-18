@@ -23,7 +23,7 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <v-card class="login-card pa-6" max-width="420">
+  <v-card class="login-card pa-4 pa-sm-6" max-width="420">
     <v-form @submit.prevent="handleSubmit">
       <h3>Sign in</h3>
       <v-alert v-if="error" type="error" variant="tonal" density="compact" class="mb-4">{{ error }}</v-alert>

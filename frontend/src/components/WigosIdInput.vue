@@ -71,4 +71,11 @@ const issuerItems = computed(() =>
   flex: 1;
   min-width: 0;
 }
+
+/* Phones: two rows of two. */
+@media (max-width: 599.98px) {
+  .wigos-id-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  }
+}
 </style>

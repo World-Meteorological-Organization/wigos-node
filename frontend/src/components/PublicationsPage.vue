@@ -79,7 +79,7 @@ const formatTime = (value) => (value ? new Date(value).toLocaleString() : "");
 </script>
 
 <template>
-  <v-card class="pa-6">
+  <v-card class="pa-4 pa-sm-6">
     <div class="list-header">
       <h3>Publishing</h3>
       <div class="list-actions">
@@ -127,7 +127,7 @@ const formatTime = (value) => (value ? new Date(value).toLocaleString() : "");
         <tbody>
           <tr v-for="row in rows" :key="row.station_id">
             <td class="when">{{ formatTime(row.updated) }}</td>
-            <td>{{ row.wigos_identifier }}</td>
+            <td class="text-no-wrap">{{ row.wigos_identifier }}</td>
             <td>{{ row.changed_by || "Administrator" }}</td>
             <td><PublicationStatusChip :status="row.status" /></td>
             <td class="row-actions">

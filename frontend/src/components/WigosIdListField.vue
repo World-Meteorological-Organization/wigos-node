@@ -42,8 +42,21 @@ const remove = (index) => {
       </div>
       <WigosIdFeedback :id="value" :status="statusOf(value)" :duplicate="duplicates.has(value)" />
     </div>
-    <v-btn v-if="!readonly" variant="tonal" color="secondary" size="small" prepend-icon="mdi-plus" @click="add">
+    <v-btn v-if="!readonly" class="add-button" variant="tonal" color="secondary" size="small" prepend-icon="mdi-plus" @click="add">
       Add additional WIGOS identifier
     </v-btn>
   </div>
 </template>
+
+<style scoped>
+/* Wraps on narrow screens instead of being cut off. */
+.add-button {
+  max-width: 100%;
+  height: auto;
+  min-height: 28px;
+}
+
+.add-button :deep(.v-btn__content) {
+  white-space: normal;
+}
+</style>

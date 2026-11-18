@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onUnmounted, ref, watch } from "vue";
+import { useDisplay } from "vuetify";
 import { listPublications } from "./api";
 import LoginPage from "./components/LoginPage.vue";
 import PublicationsPage from "./components/PublicationsPage.vue";
@@ -31,6 +32,13 @@ const NAV_ITEMS = [
 const showNav = computed(() => status.value === "authenticated" && NAV_ITEMS.some((item) => item.mode === view.value.mode));
 // null: open on large screens, closed on small ones (Vuetify's default)
 const navOpen = ref(null);
+const { mobile } = useDisplay();
+
+// On small screens the drawer covers the page, so it closes once a page is picked.
+function openPage(mode) {
+  view.value = { mode };
+  if (mobile.value) navOpen.value = false;
+}
 
 // Failed stations the user can edit, on the Publishing item. It only shows with
 // the sidebar, so it is only kept up to date then.
@@ -76,13 +84,22 @@ async function handleLogout() {
       </template>
       <img class="app-bar-logo" src="./assets/img/logo.png" alt="WMO logo" />
       <div class="app-bar-title">
-        <h1>WMDR Station Record Builder</h1>
+        <h1>Demo WIGOS Node</h1>
         <!-- On narrower screens it would run into the dark part of the banner. -->
-        <p class="d-none d-lg-block">Fill in station metadata and generate a WMDRv2 conformant record.</p>
+        <p class="d-none d-lg-block">Fill in station metadata to create and publish WMDRv2 records.</p>
       </div>
       <template v-if="status === 'authenticated'" #append>
-        <span class="app-bar-user mr-3">{{ user.email || user.username }}</span>
-        <v-btn class="app-bar-user" variant="tonal" @click="handleLogout">Log out</v-btn>
+        <span class="app-bar-user mr-3 d-none d-sm-inline">{{ user.email || user.username }}</span>
+        <v-btn class="app-bar-user d-none d-sm-flex" variant="tonal" @click="handleLogout">Log out</v-btn>
+        <v-btn
+          class="app-bar-user d-sm-none"
+          variant="tonal"
+          icon="mdi-logout"
+          size="small"
+          :aria-label="`Log out ${user.email || user.username}`"
+          :title="`Log out ${user.email || user.username}`"
+          @click="handleLogout"
+        />
       </template>
     </v-app-bar>
 
@@ -98,7 +115,7 @@ async function handleLogout() {
           :prepend-icon="item.icon"
           :active="view.mode === item.mode"
           color="primary"
-          @click="view = { mode: item.mode }"
+          @click="openPage(item.mode)"
         >
           <template v-if="item.mode === 'publications' && failures > 0" #append>
             <v-chip size="x-small" color="error" variant="flat" :aria-label="`${failures} failed`">{{ failures }}</v-chip>
@@ -201,5 +218,26 @@ async function handleLogout() {
 /* The batch wizard needs the width for wide grids. */
 .app-main-wide {
   max-width: none;
+}
+
+/* Phones: smaller banner contents and less padding around the page. */
+@media (max-width: 599.98px) {
+  .app-bar {
+    padding: 0 0.25rem;
+  }
+
+  .app-bar-logo {
+    height: 44px;
+    margin-right: 0.5rem;
+  }
+
+  .app-bar-title h1 {
+    font-size: 1.1rem;
+    line-height: 1.2;
+  }
+
+  .app-main {
+    padding: 0.75rem;
+  }
 }
 </style>

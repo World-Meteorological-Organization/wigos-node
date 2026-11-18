@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onUnmounted, ref } from "vue";
-import { listMyStations } from "../api";
+import { listMyStations, readLink } from "../api";
 import PublicationStatusChip from "./PublicationStatusChip.vue";
 import StationsMap from "./StationsMap.vue";
 import SelectionBar from "./SelectionBar.vue";
@@ -11,7 +11,7 @@ const selected = defineModel("selected", { type: Set, required: true });
 const emit = defineEmits(["new", "edit", "batch", "changed"]);
 
 const HEADERS = [
-  { title: "WIGOS identifier", key: "wsi" },
+  { title: "WIGOS identifier", key: "wsi", cellProps: { class: "text-no-wrap" } },
   { title: "Name", key: "name" },
   { title: "Publishing", key: "publishing", sortable: false },
   { title: "", key: "actions", sortable: false, align: "end" },
@@ -21,8 +21,8 @@ const stations = ref([]);
 const loadState = ref({ status: "loading" });
 
 // Each station's publishing status, refreshed while one is on its way. Empty, as
-// never queued, shows as unknown; null, as the user can't edit it, shows no chip.
-// A refresh only updates these: new stations would make the map fit itself again.
+// never queued, shows as unknown. A refresh only updates these: new stations
+// would make the map fit itself again.
 const REFRESH_MS = 5000;
 const statuses = ref({});
 let timer = null;
@@ -54,9 +54,10 @@ onUnmounted(() => {
   clearTimeout(timer);
 });
 
-const editableIds = computed(() => stations.value.filter((station) => station.can_edit).map((station) => station.station_id));
-// Only stations still listed and editable count as selected.
-const selectedIds = computed(() => editableIds.value.filter((id) => selected.value.has(id)));
+// The list holds only stations the user can edit.
+const stationIds = computed(() => stations.value.map((station) => station.station_id));
+// Only stations still listed count as selected.
+const selectedIds = computed(() => stationIds.value.filter((id) => selected.value.has(id)));
 
 const setSelected = (ids) => {
   selected.value = new Set(ids);
@@ -65,7 +66,7 @@ const rowProps = ({ item }) => ({ class: selectedIds.value.includes(item.station
 </script>
 
 <template>
-  <v-card class="pa-6">
+  <v-card class="pa-4 pa-sm-6">
     <div class="list-header">
       <h3>My stations</h3>
       <v-btn color="primary" prepend-icon="mdi-plus" @click="emit('new')">New station</v-btn>
@@ -80,8 +81,8 @@ const rowProps = ({ item }) => ({ class: selectedIds.value.includes(item.station
       <SelectionBar
         v-if="selectedIds.length > 0"
         :count="selectedIds.length"
-        :editable-count="editableIds.length"
-        @select-all="setSelected(editableIds)"
+        :total="stationIds.length"
+        @select-all="setSelected(stationIds)"
         @clear="setSelected([])"
         @batch="emit('batch', selectedIds)"
       />
@@ -89,7 +90,6 @@ const rowProps = ({ item }) => ({ class: selectedIds.value.includes(item.station
         :headers="HEADERS"
         :items="stations"
         item-value="station_id"
-        item-selectable="can_edit"
         show-select
         select-strategy="all"
         :model-value="selectedIds"
@@ -101,17 +101,18 @@ const rowProps = ({ item }) => ({ class: selectedIds.value.includes(item.station
         <template #[`item.data-table-select`]="{ item, internalItem, isSelected, toggleSelect }">
           <v-checkbox-btn
             :model-value="isSelected(internalItem)"
-            :disabled="!item.can_edit"
             :aria-label="`Select ${item.name || item.wsi}`"
-            :title="item.can_edit ? undefined : `You don't have permission to edit this station`"
             @update:model-value="toggleSelect(internalItem)"
           />
         </template>
         <template #[`item.publishing`]="{ item }">
-          <PublicationStatusChip v-if="statuses[item.station_id] != null" :status="statuses[item.station_id]" />
+          <PublicationStatusChip :status="statuses[item.station_id]" />
         </template>
         <template #[`item.actions`]="{ item }">
-          <v-btn variant="tonal" color="secondary" size="small" @click="emit('edit', item.station_id)">Edit</v-btn>
+          <div class="d-flex ga-2">
+            <v-btn variant="tonal" color="secondary" size="small" @click="emit('edit', item.station_id)">Edit</v-btn>
+            <v-btn variant="tonal" color="grey-darken-1" size="small" :href="readLink(item.wsi)">View</v-btn>
+          </div>
         </template>
       </v-data-table>
     </template>

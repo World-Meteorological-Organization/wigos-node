@@ -9,7 +9,7 @@ import { computed } from "vue";
 // Shown at the top of the station list while stations are selected.
 const props = defineProps({
   count: { type: Number, required: true },
-  editableCount: { type: Number, required: true },
+  total: { type: Number, required: true },
 });
 const emit = defineEmits(["select-all", "clear", "batch"]);
 
@@ -19,8 +19,8 @@ const tooMany = computed(() => props.count > MAX_BATCH_STATIONS);
 <template>
   <v-sheet class="selection-bar" role="region" aria-label="Selected stations">
     <span class="selection-count">{{ count }} {{ count === 1 ? "station" : "stations" }} selected</span>
-    <v-btn variant="text" color="secondary" :disabled="count === editableCount" @click="emit('select-all')">
-      Select all ({{ editableCount }})
+    <v-btn variant="text" color="secondary" :disabled="count === total" @click="emit('select-all')">
+      Select all ({{ total }})
     </v-btn>
     <v-btn variant="text" color="secondary" @click="emit('clear')">Clear selection</v-btn>
     <v-spacer />

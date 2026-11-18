@@ -50,7 +50,9 @@ const CURRENT = "__current__";
 
 <script setup>
 import { computed, ref } from "vue";
+import { useReadonly } from "./readonly";
 
+const readonly = useReadonly();
 const props = defineProps({
   label: { type: String, required: true },
   options: Array,
@@ -148,7 +150,7 @@ function updateFreeText(key, text) {
     :model-value="selectedValue"
     :custom-filter="filter"
     auto-select-first
-    clearable
+    :clearable="!readonly"
     @update:model-value="choose"
   >
     <template #item="{ item, props: itemProps }">
@@ -166,7 +168,7 @@ function updateFreeText(key, text) {
     placeholder="None selected"
     :items="items"
     :model-value="selectedValue"
-    clearable
+    :clearable="!readonly"
     @update:model-value="choose"
   />
 </template>

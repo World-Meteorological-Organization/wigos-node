@@ -172,10 +172,6 @@ function cleanContact(contact) {
 function cleanTime(time) {
   if (!time) return null;
   const cleaned = {};
-  const date = trim(time.date);
-  if (date) cleaned.date = date;
-  const timestamp = isoDateTime(time.timestamp);
-  if (timestamp) cleaned.timestamp = timestamp;
   const interval = cleanDates(time.intervalStart, time.intervalEnd);
   if (interval) cleaned.interval = interval;
   const resolution = trim(time.resolution);
@@ -380,8 +376,6 @@ export function parseConcept(value) {
 function parseTime(time) {
   const [intervalStart, intervalEnd] = (time && time.interval) || [];
   return {
-    date: (time && time.date) || "",
-    timestamp: time && time.timestamp ? toDatetimeLocal(time.timestamp) : "",
     intervalStart: fromOpenDate(intervalStart),
     intervalEnd: fromOpenDate(intervalEnd),
     resolution: (time && time.resolution) || "",

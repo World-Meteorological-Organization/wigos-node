@@ -159,11 +159,20 @@ class BatchAPITestCase(APITestCase):
         response = self.post_batch([invalid, self.update(self.stations[1], title='Valid')])
         first, second = response.json()['results']
         self.assertEqual(first['status'], 'error')
-        self.assertEqual(first['message'], 'The record is not valid against the WMDR2 schema.')
-        self.assertIn("/properties/observations/0/configurations/0: 'time' is a required property", first['errors'])
+        self.assertEqual(first['message'], 'The record is not valid WMDR2.')
+        self.assertIn("$.properties.observations[0].configurations[0]: 'time' is a required property", first['errors'])
         self.assertEqual(second['status'], 'ok')
         self.assertEqual(self.title_of(self.stations[0]), 'Batch 0')
         self.assertEqual(self.title_of(self.stations[1]), 'Valid')
+
+    def test_a_code_outside_the_wmds_codelists_is_rejected(self):
+        self.client.force_authenticate(self.owner)
+        invalid = self.update(self.stations[0], title='Invalid')
+        invalid['wmdrv2']['properties']['observations'][0]['observedProperty'] = {'id': 'not-a-variable'}
+        first, = self.post_batch([invalid]).json()['results']
+        self.assertEqual(first['status'], 'error')
+        self.assertEqual(first['errors'], ['Invalid codelist value for observedProperty'])
+        self.assertEqual(self.title_of(self.stations[0]), 'Batch 0')
 
     def test_station_without_permission_fails_alone(self):
         other = Station(wmdrv2=record(f'0-{ISSUER_A}-0-other'), owner=self.outsider)
@@ -231,26 +240,23 @@ class BatchAPITestCase(APITestCase):
         self.assertEqual(self.client.get(self.url).status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.client.get(self.url, {'station_id': 'abc'}).status_code, status.HTTP_400_BAD_REQUEST)
 
-    def can_edit_map(self):
-        response = self.client.get(reverse('my_stations'))
-        return {s['station_id']: s['can_edit'] for s in response.json()}
+    def listed_ids(self):
+        return {s['station_id'] for s in self.client.get(reverse('my_stations')).json()}
 
-    def test_my_stations_can_edit(self):
+    def test_my_stations_lists_only_editable_stations(self):
         mine = {s.id for s in self.stations}
 
         self.client.force_authenticate(self.owner)
-        can_edit = self.can_edit_map()
-        self.assertTrue(all(can_edit[i] for i in mine))
-        self.assertFalse(any(v for i, v in can_edit.items() if i not in mine))
+        self.assertEqual(self.listed_ids(), mine)
 
         self.client.force_authenticate(self.member)
-        self.assertTrue(all(self.can_edit_map()[i] for i in mine))
+        self.assertEqual(self.listed_ids(), mine)
 
         self.client.force_authenticate(self.outsider)
-        self.assertFalse(any(self.can_edit_map().values()))
+        self.assertEqual(self.listed_ids(), set())
 
         self.client.force_authenticate(None)
-        self.assertFalse(any(self.can_edit_map().values()))
+        self.assertEqual(self.listed_ids(), set())
 
     def test_single_put_validates_schema(self):
         self.client.force_authenticate(self.owner)

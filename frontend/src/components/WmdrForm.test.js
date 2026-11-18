@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { flushPromises, mount } from "@vue/test-utils";
 import { createVuetify } from "vuetify";
 import WmdrForm from "./WmdrForm.vue";
-import { getCodelist, getStation } from "../api";
+import { getCodelist, getStation, getStationByWsi } from "../api";
 import { buildWmdrRecord, parseWmdrRecord } from "../wmdr";
 import allFields from "../__fixtures__/all-fields.json";
 
@@ -14,6 +14,8 @@ import allFields from "../__fixtures__/all-fields.json";
 vi.mock("../api", () => ({
   getCodelist: vi.fn(),
   getStation: vi.fn(),
+  getStationByWsi: vi.fn(),
+  listMyIssuers: vi.fn(() => Promise.resolve({ issuer_of_identifiers: [756] })),
   saveStation: vi.fn(),
   checkWigosIdentifiers: vi.fn(() => Promise.resolve({})),
 }));
@@ -25,6 +27,7 @@ const CODELISTS = {
   FacilityType: [option("FacilityType", "landFixed", "Land (fixed)")],
   ObservedVariableAtmosphere: atmosphere,
   ProgramAffiliation: [option("ProgramAffiliation", "GOS", "GOS")],
+  ISO3166: [{ code: "076", label: "Brazil" }, { code: "756", label: "Switzerland" }],
 };
 
 let wrapper;
@@ -83,6 +86,34 @@ describe("WmdrForm", () => {
     expect(shown).toEqual(expected);
     // The primary ID can't change while editing.
     expect(inputByLabel("Local identifier").attributes("disabled")).toBeDefined();
+    expect(vueWarnings()).toEqual([]);
+  });
+
+  it("offers only the user's issuers, or all of them to a superuser", async () => {
+    const issuers = () =>
+      wrapper.findAllComponents({ name: "VAutocomplete" }).find((c) => c.props("label") === "Issuer").props("items").map((i) => i.value);
+
+    mountForm();
+    await flushPromises();
+    expect(issuers()).toEqual(["756"]);
+
+    wrapper.unmount();
+    mountForm({ anyIssuer: true });
+    await flushPromises();
+    expect(issuers()).toEqual(["76", "756"]);
+  });
+
+  it("shows a station by WIGOS ID read-only", async () => {
+    getStationByWsi.mockResolvedValue(allFields);
+    mountForm({ wsi: allFields.id });
+    await flushPromises();
+
+    expect(getStationByWsi).toHaveBeenCalledWith(allFields.id);
+    expect(inputByLabel("Title *").element.value).toBe(allFields.properties.title);
+    expect(inputByLabel("Title *").attributes("readonly")).toBeDefined();
+    const buttons = wrapper.findAll("button").map((b) => b.text());
+    expect(buttons.filter((text) => /^(Save|Cancel|Remove|Add)/.test(text))).toEqual([]);
+    expect(wrapper.find(".v-field__clearable").exists()).toBe(false);
     expect(vueWarnings()).toEqual([]);
   });
 

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, reactive } from "vue";
 import { OPEN, dayFromPicker, describeInterval, intervalError, pickerFromDay, readBound } from "../interval";
+import { useReadonly } from "./readonly";
 
 // A From – To interval. Bounds are typed freely and the interval is read back
 // below ("Since January 2020, ongoing"); a calendar picks a day; "Unknown" /
@@ -15,6 +16,7 @@ const end = defineModel("end", { type: String, default: "" });
 
 const options = computed(() => ({ daysOnly: props.daysOnly }));
 const pickerOpen = reactive({ start: false, end: false });
+const readonly = useReadonly();
 
 const bounds = computed(() => [
   { key: "start", model: start, label: "From", openLabel: "Unknown" },
@@ -48,13 +50,13 @@ function pick(bound, value) {
           <v-text-field
             :label="bound.label"
             :model-value="isOpen(bound) ? '' : bound.model.value"
-            :disabled="isOpen(bound)"
-            :placeholder="isOpen(bound) ? '' : daysOnly ? 'YYYY-MM-DD' : 'e.g. 2020, 2020-01, 2020-01-31'"
-            :persistent-placeholder="!isOpen(bound)"
+            :disabled="isOpen(bound) && !readonly"
+            :placeholder="isOpen(bound) || readonly ? '' : daysOnly ? 'YYYY-MM-DD' : 'e.g. 2020, 2020-01, 2020-01-31'"
+            :persistent-placeholder="!isOpen(bound) && !readonly"
             :error-messages="errorsOf(bound)"
             @update:model-value="(value) => set(bound, value)"
           >
-            <template #append-inner>
+            <template v-if="!readonly" #append-inner>
               <v-menu v-model="pickerOpen[bound.key]" :close-on-content-click="false">
                 <template #activator="{ props: activator }">
                   <v-btn

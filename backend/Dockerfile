@@ -17,6 +17,13 @@ RUN pip install --no-cache-dir -r /tmp/publishing-requirements.txt
 COPY . .
 RUN chmod +x entrypoint.sh
 
+# pywmdr's bundle from the repo instead of `pywmdr bundle sync`: our pinned
+# schema, and the WMDS codelists zip it downloads (flattened, as sync does).
+RUN mkdir -p "$HOME/.pywmdr/wmdr2" "$HOME/.pywmdr/wmds" \
+    && cp api/schemas/wmdr2-bundled.json "$HOME/.pywmdr/wmdr2/" \
+    && python -c "import pathlib, sys, zipfile; z = zipfile.ZipFile(sys.argv[1]); [pathlib.Path(sys.argv[2], pathlib.PurePosixPath(n).name).write_bytes(z.read(n)) for n in z.namelist() if not n.endswith('/')]" \
+       api/codelists/wmds-csv-concepts.zip "$HOME/.pywmdr/wmds"
+
 # The publishing plugins live outside backend/ (repo-root publishing/), passed
 # in as the "publishing" build context by docker-compose.yml.
 COPY --from=publishing . /publishing

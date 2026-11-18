@@ -1,16 +1,19 @@
 <script setup>
 import WigosIdInput from "./WigosIdInput.vue";
 import WigosIdFeedback from "./WigosIdFeedback.vue";
+import { useReadonly } from "./readonly";
 
 // A list of WIGOS IDs, each entered part by part like the primary identifier.
 // Starts empty: rows only appear once "Add" is pressed, and every row can be removed.
 defineProps({
   label: { type: String, required: true },
   issuerCountries: { type: Array, required: true },
+  allowedIssuers: { type: Set, default: null },
   statusOf: { type: Function, required: true },
   duplicates: { type: Set, required: true },
 });
 const values = defineModel({ type: Array, required: true });
+const readonly = useReadonly();
 
 const update = (index, value) => {
   values.value = values.value.map((v, i) => (i === index ? value : v));
@@ -31,15 +34,29 @@ const remove = (index) => {
         <WigosIdInput
           :model-value="value"
           :issuer-countries="issuerCountries"
+          :allowed-issuers="allowedIssuers"
           :label-prefix="`${label} ${i + 1}: `"
           @update:model-value="(next) => update(i, next)"
         />
-        <v-btn variant="outlined" @click="remove(i)">Remove</v-btn>
+        <v-btn v-if="!readonly" variant="outlined" @click="remove(i)">Remove</v-btn>
       </div>
       <WigosIdFeedback :id="value" :status="statusOf(value)" :duplicate="duplicates.has(value)" />
     </div>
-    <v-btn variant="tonal" color="secondary" size="small" prepend-icon="mdi-plus" @click="add">
+    <v-btn v-if="!readonly" class="add-button" variant="tonal" color="secondary" size="small" prepend-icon="mdi-plus" @click="add">
       Add additional WIGOS identifier
     </v-btn>
   </div>
 </template>
+
+<style scoped>
+/* Wraps on narrow screens instead of being cut off. */
+.add-button {
+  max-width: 100%;
+  height: auto;
+  min-height: 28px;
+}
+
+.add-button :deep(.v-btn__content) {
+  white-space: normal;
+}
+</style>

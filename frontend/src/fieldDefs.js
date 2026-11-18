@@ -4,9 +4,8 @@
 // An interval field (IntervalField) edits two keys of its item, `start` and
 // `end`. Time intervals accept years, months, days, UTC timestamps and times of
 // day; an open bound is ".." (and an empty one is written as ".." too).
+// Interval covers date and timestamp, which are dropped on save.
 export const TIME_FIELDS = [
-  { name: "date", label: "Date", type: "date" },
-  { name: "timestamp", label: "Timestamp", type: "datetime-local" },
   { name: "interval", label: "Interval", type: "interval", start: "intervalStart", end: "intervalEnd" },
   { name: "resolution", label: "Resolution", type: "duration" },
 ];

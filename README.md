@@ -138,7 +138,7 @@ backend/
     views.py         REST endpoints
     auth.py          Login endpoints for the frontend
     schemas/         WMDR2 JSON schema (keep identical to the frontend copy)
-    codelists/       WMO codelists, committed and served as they are
+    codelists/       ISO3166, and the WMDS codelists zip unpacked for pywmdr at build
 publishing/
   publishing/
     base.py          Plugin interfaces: Event, MessageGenerator, TransportLayer, Publisher

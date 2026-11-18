@@ -109,6 +109,16 @@ describe("buildWmdrRecord", () => {
     expect(validateWmdrRecord(rebuilt)).toEqual([]);
   });
 
+  it("keeps a configuration's interval and resolution, dropping a stored date or timestamp", () => {
+    const time = { date: "2020-01-01", timestamp: "2020-01-01T00:00:37.000Z", interval: ["2020", ".."], resolution: "PT1H" };
+    const [observation] = allFields.properties.observations;
+    const configurations = [{ ...observation.configurations[0], time }];
+    const record = { ...allFields, properties: { ...allFields.properties, observations: [{ ...observation, configurations }] } };
+    const rebuilt = roundTrip(record);
+    expect(rebuilt.properties.observations[0].configurations[0].time).toEqual({ interval: ["2020", ".."], resolution: "PT1H" });
+    expect(validateWmdrRecord(rebuilt)).toEqual([]);
+  });
+
   it("reports every required field for an empty form", () => {
     expect(validateWmdrRecord(roundTrip({}))).toEqual([
       "id has an invalid format",

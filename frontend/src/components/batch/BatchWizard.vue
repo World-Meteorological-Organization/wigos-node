@@ -137,7 +137,7 @@ function addRows() {
 </script>
 
 <template>
-  <v-card class="pa-6">
+  <v-card class="pa-4 pa-sm-6">
     <div class="list-header">
       <h3>Batch operations{{ operation && step !== "operation" ? `: ${operation.name}` : "" }}</h3>
       <v-btn variant="text" color="secondary" prepend-icon="mdi-chevron-left" @click="emit('close')">

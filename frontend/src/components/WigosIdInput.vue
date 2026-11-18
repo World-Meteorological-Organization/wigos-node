@@ -1,15 +1,19 @@
 <script setup>
 import { computed } from "vue";
 import { splitWigosId, joinWigosId } from "../wmdr";
+import { useReadonly } from "./readonly";
 
 // A WIGOS station identifier entered as its four parts: a fixed scheme (0),
 // the issuer country from ISO3166, the issue number and the local identifier.
 const props = defineProps({
   issuerCountries: { type: Array, required: true },
+  // Issuer numbers that can be chosen; null for all. The current one always shows.
+  allowedIssuers: { type: Set, default: null },
   disabled: Boolean,
   labelPrefix: { type: String, default: "" },
 });
 const value = defineModel({ type: String, required: true });
+const readonly = useReadonly();
 
 const parts = computed(() => splitWigosId(value.value));
 const setPart = (part, text) => {
@@ -17,10 +21,9 @@ const setPart = (part, text) => {
 };
 
 const issuerItems = computed(() =>
-  props.issuerCountries.map((country) => ({
-    title: `${country.code} — ${country.label}`,
-    value: String(Number(country.code)),
-  }))
+  props.issuerCountries
+    .map((country) => ({ title: `${country.code} — ${country.label}`, value: String(Number(country.code)) }))
+    .filter((item) => !props.allowedIssuers || props.allowedIssuers.has(Number(item.value)) || item.value === parts.value.issuer)
 );
 </script>
 
@@ -30,7 +33,7 @@ const issuerItems = computed(() =>
       class="wigos-id-scheme"
       label="Scheme"
       :model-value="parts.scheme"
-      disabled
+      :disabled="!readonly"
       :aria-label="`${labelPrefix}Identifier scheme`"
       title="Identifier scheme (always 0 for a WIGOS station identifier)"
     />
@@ -67,5 +70,12 @@ const issuerItems = computed(() =>
   gap: 0.5rem;
   flex: 1;
   min-width: 0;
+}
+
+/* Phones: two rows of two. */
+@media (max-width: 599.98px) {
+  .wigos-id-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  }
 }
 </style>

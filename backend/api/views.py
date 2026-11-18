@@ -5,6 +5,7 @@ from pathlib import Path
 import django.http
 from django.conf import settings
 from django.db import transaction
+from pywmdr.util import get_userdir
 from rest_framework import status
 from rest_framework.decorators import (
     api_view,
@@ -35,7 +36,11 @@ def health(request):
 
 
 def codelist(request, scheme):
-    path = Path(settings.BASE_DIR) / "api" / "codelists" / f"{scheme}.csv"
+    """A codelist from pywmdr's WMDS bundle (the ones validation uses), or one
+    committed in api/codelists (ISO3166)."""
+    path = get_userdir() / "wmds" / f"{scheme}.csv"
+    if not path.exists():
+        path = Path(settings.BASE_DIR) / "api" / "codelists" / f"{scheme}.csv"
     if not path.exists():
         return django.http.HttpResponseNotFound(f"No cached codelist for '{scheme}'")
     return django.http.HttpResponse(path.read_text(encoding="utf-8"), content_type="text/csv")
@@ -56,7 +61,7 @@ def geojson(request):
 
 @api_view(["GET"])
 def my_stations(request):
-    my_stations = Station.objects.filter(wmdrv2__isnull=False) # return all stations in the meantime
+    """The stations the user can edit."""
     editable = stations.editable_station_ids(request.user)
     return Response([
         {
@@ -65,10 +70,9 @@ def my_stations(request):
             "name": station.name,
             "latitude": station.location.y,
             "longitude": station.location.x,
-            "can_edit": station.id in editable,
-            "publication_status": station.publication_status if station.id in editable else None,
+            "publication_status": station.publication_status,
         }
-        for station in my_stations
+        for station in Station.objects.filter(id__in=editable)
     ])
 
 @api_view(["GET"])

@@ -4,7 +4,7 @@ const initialState = () => ({
   latitude: "",
   longitude: "",
   height: "",
-  time: { date: "", timestamp: "", intervalStart: "", intervalEnd: "", resolution: "" },
+  time: { intervalStart: "", intervalEnd: "", resolution: "" },
   title: "",
   description: "",
   additionalTitles: [""],
@@ -38,10 +38,11 @@ const linkSummary = (l) => l.title || l.href;
 </script>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, provide, ref } from "vue";
 import { WIGOS_ID_PATTERN, buildWmdrRecord, parseWmdrRecord, duplicateWigosIds } from "../wmdr";
 import { validateWmdrRecord } from "../wmdrSchema";
-import { saveStation, getStation, getCodelist } from "../api";
+import { saveStation, getStation, getStationByWsi, getCodelist, listMyIssuers } from "../api";
+import { READONLY } from "./readonly";
 import { useWigosIdAvailability } from "../composables/useWigosIdAvailability";
 import { STATION_TIME_FIELDS, LINK_FIELDS } from "../fieldDefs";
 import StringListField from "./StringListField.vue";
@@ -55,12 +56,19 @@ import ObjectArrayItemRow from "./ObjectArrayItemRow.vue";
 import ObservationsField from "./ObservationsField.vue";
 import MapPreview from "./MapPreview.vue";
 
-// Creates a station, or edits the one with `stationId`. The parent re-mounts
-// it (by key) for another station.
-const props = defineProps({ stationId: { type: [String, Number], default: null } });
+// Creates a station, edits the one with `stationId`, or shows the one with
+// `wsi` read-only. The parent re-mounts it (by key) for another station.
+const props = defineProps({
+  stationId: { type: [String, Number], default: null },
+  wsi: { type: String, default: null },
+  // Superusers may use any issuer; others only those of their groups.
+  anyIssuer: Boolean,
+});
 const emit = defineEmits(["saved", "cancel"]);
 
-const isEditing = props.stationId != null;
+const readonly = props.wsi != null;
+provide(READONLY, readonly);
+const isEditing = props.stationId != null || readonly;
 const form = ref(initialState());
 const submitState = ref({ status: "idle" });
 const loadState = ref({ status: isEditing ? "loading" : "idle" });
@@ -80,12 +88,19 @@ const comparable = (state) => JSON.stringify(buildWmdrRecord(state, { now: COMPA
 getCodelist("FacilityType").then((options) => (facilityTypes.value = options)).catch(() => {});
 getCodelist("WMORegion").then((options) => (wmoRegions.value = options)).catch(() => {});
 getCodelist("ISO3166").then((options) => (issuerCountries.value = options)).catch(() => {});
+// The issuers the user may choose; null (all) if it can't be loaded, as saving re-checks.
+const myIssuers = ref(null);
+if (!readonly && !props.anyIssuer) {
+  listMyIssuers()
+    .then(({ issuer_of_identifiers }) => (myIssuers.value = new Set(issuer_of_identifiers)))
+    .catch(() => {});
+}
 getCodelist("TerritoryName")
   .then((options) => (territoryNames.value = [...options].sort((a, b) => a.label.localeCompare(b.label))))
   .catch(() => {});
 
 if (isEditing) {
-  getStation(props.stationId)
+  (readonly ? getStationByWsi(props.wsi) : getStation(props.stationId))
     .then((record) => {
       const parsed = parseWmdrRecord(record);
       savedRecord.value = comparable(parsed);
@@ -118,6 +133,13 @@ const valid = computed(() => schemaValid.value && !idsBlocked.value);
 const recordJson = computed(() => JSON.stringify(record.value, null, 2));
 const unchanged = computed(() => savedRecord.value !== null && savedRecord.value === comparable(form.value));
 
+const copied = ref(false);
+async function copyPreview() {
+  await navigator.clipboard.writeText(recordJson.value);
+  copied.value = true;
+  setTimeout(() => (copied.value = false), 1500);
+}
+
 async function handleSubmit() {
   if (!valid.value || unchanged.value) return;
   submitState.value = { status: "loading" };
@@ -149,19 +171,19 @@ const submitLabel = computed(() => (isEditing ? "Save changes" : "Save WMDR reco
   <!-- Keeps the floating button from covering the top of the form before scrolling. -->
   <div class="back-button-spacer" />
 
-  <v-card v-if="isEditing && loadState.status === 'loading'" class="pa-6">Loading station...</v-card>
+  <v-card v-if="isEditing && loadState.status === 'loading'" class="pa-4 pa-sm-6">Loading station...</v-card>
   <v-alert v-else-if="isEditing && loadState.status === 'error'" type="error" variant="tonal">
     Error: {{ loadState.error }}
   </v-alert>
 
   <v-row v-else>
     <v-col cols="12" md="7">
-      <v-form @submit.prevent="handleSubmit">
-        <v-card class="pa-6 mb-5">
+      <v-form :readonly="readonly" @submit.prevent="handleSubmit">
+        <v-card class="pa-4 pa-sm-6 mb-5">
           <h3 class="section-title">Identification</h3>
           <div class="wigos-id-box">
             <div class="group-label">WIGOS station identifier<span class="required-mark">*</span></div>
-            <WigosIdInput v-model="form.id" :issuer-countries="issuerCountries" :disabled="isEditing" />
+            <WigosIdInput v-model="form.id" :issuer-countries="issuerCountries" :allowed-issuers="myIssuers" :disabled="isEditing && !readonly" />
             <WigosIdFeedback :id="form.id" :status="idStatusOf(form.id)" :duplicate="duplicateIds.has(form.id)" />
 
             <div class="mt-4">
@@ -169,6 +191,7 @@ const submitLabel = computed(() => (isEditing ? "Save changes" : "Save WMDR reco
                 v-model="form.additionalIds"
                 label="Additional WIGOS identifiers"
                 :issuer-countries="issuerCountries"
+                :allowed-issuers="myIssuers"
                 :status-of="idStatusOf"
                 :duplicates="duplicateIds"
               />
@@ -199,7 +222,7 @@ const submitLabel = computed(() => (isEditing ? "Save changes" : "Save WMDR reco
           </div>
         </v-card>
 
-        <v-card class="pa-6 mb-5">
+        <v-card class="pa-4 pa-sm-6 mb-5">
           <h3 class="section-title">Properties</h3>
           <v-text-field v-model="form.title" class="mb-3" label="Title *" />
           <v-textarea v-model="form.description" class="mb-4" label="Description" rows="3" auto-grow />
@@ -236,7 +259,7 @@ const submitLabel = computed(() => (isEditing ? "Save changes" : "Save WMDR reco
           <ObservationsField v-model="form.observations" />
         </v-card>
 
-        <v-card class="pa-6 mb-5">
+        <v-card class="pa-4 pa-sm-6 mb-5">
           <h3 class="section-title">Links</h3>
           <ObjectArrayField
             v-model="form.links"
@@ -246,10 +269,10 @@ const submitLabel = computed(() => (isEditing ? "Save changes" : "Save WMDR reco
             :item-summary="linkSummary"
             :path="[]"
           />
-          <p class="text-caption text-medium-emphasis">A link to this record on this node is added automatically.</p>
+          <p v-if="!readonly" class="text-caption text-medium-emphasis">A link to this record on this node is added automatically.</p>
         </v-card>
 
-        <div class="d-flex ga-3 align-center">
+        <div v-if="!readonly" class="d-flex ga-3 align-center">
           <v-btn
             type="submit"
             color="primary"
@@ -274,11 +297,11 @@ const submitLabel = computed(() => (isEditing ? "Save changes" : "Save WMDR reco
 
     <v-col cols="12" md="5">
       <div class="sticky-col">
-        <v-card class="pa-6 mb-5">
+        <v-card class="pa-4 pa-sm-6 mb-5">
           <h3 class="section-title">Map</h3>
           <MapPreview :latitude="form.latitude" :longitude="form.longitude" />
         </v-card>
-        <v-card class="pa-6">
+        <v-card class="pa-4 pa-sm-6">
           <h3 class="section-title">GeoJSON preview</h3>
           <v-alert v-if="schemaValid" type="success" variant="tonal" density="compact">
             Valid against the WMDR2 schema.
@@ -289,7 +312,20 @@ const submitLabel = computed(() => (isEditing ? "Save changes" : "Save WMDR reco
               <li v-for="error in schemaErrors" :key="error">{{ error }}</li>
             </ul>
           </v-alert>
-          <pre class="geojson-preview">{{ recordJson }}</pre>
+          <div class="preview-box">
+            <pre class="geojson-preview">{{ recordJson }}</pre>
+            <v-btn
+              class="copy-button"
+              :icon="copied ? 'mdi-check' : 'mdi-content-copy'"
+              :color="copied ? 'success' : 'white'"
+              variant="flat"
+              elevation="2"
+              size="small"
+              :title="copied ? 'Copied' : 'Copy to clipboard'"
+              aria-label="Copy GeoJSON preview"
+              @click="copyPreview"
+            />
+          </div>
         </v-card>
       </div>
     </v-col>
@@ -329,6 +365,24 @@ const submitLabel = computed(() => (isEditing ? "Save changes" : "Save WMDR reco
   max-height: 160px;
   overflow: auto;
   font-size: 0.85rem;
+}
+
+.preview-box {
+  position: relative;
+}
+
+/* Faint so the JSON behind it stays readable; solid when hovered or focused. */
+.copy-button {
+  position: absolute;
+  top: 8px;
+  right: 24px; /* clears the preview's scrollbar */
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.copy-button:hover,
+.copy-button:focus-visible {
+  opacity: 1;
 }
 
 .geojson-preview {

@@ -95,6 +95,27 @@ h3 {
   min-width: 0;
 }
 
+/* Fields of a read-only form (Vuetify sets v-input--readonly): greyed out. */
+.v-input--readonly .v-field {
+  background: #f1f4f8;
+  color: #334155;
+}
+
+.v-input--readonly input,
+.v-input--readonly textarea,
+.v-input--readonly .v-field {
+  cursor: default;
+}
+
+.v-input--readonly .v-select__menu-icon,
+.v-input--readonly .v-autocomplete__menu-icon {
+  display: none;
+}
+
+.v-input--readonly .v-selection-control {
+  opacity: 0.8;
+}
+
 .field-message {
   margin-top: 0.3rem;
   font-size: 0.8rem;

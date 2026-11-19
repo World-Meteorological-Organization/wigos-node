@@ -1,5 +1,7 @@
 import { parseCsv } from "./csv";
 import { csrfHeader } from "./auth";
+import { translate } from "./i18n/plain";
+import { backendMessage } from "./i18n/backendMessages";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
@@ -14,7 +16,7 @@ function handle401(res) {
 export async function getHello() {
   const res = handle401(await fetch(`${API_URL}/api/hello/`, { credentials: "include" }));
   if (!res.ok) {
-    throw new Error(`API request failed: ${res.status}`);
+    throw new Error(translate("api.requestFailed", { status: res.status }));
   }
   return res.json();
 }
@@ -29,7 +31,7 @@ export async function saveStation(stationId, record) {
   }));
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.detail || `API request failed: ${res.status}`);
+    throw new Error(backendMessage(data.detail) || translate("api.requestFailed", { status: res.status }));
   }
   return data;
 }
@@ -40,7 +42,7 @@ export async function getStation(stationId) {
   }));
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.detail || `API request failed: ${res.status}`);
+    throw new Error(backendMessage(data.detail) || translate("api.requestFailed", { status: res.status }));
   }
   return data;
 }
@@ -51,7 +53,7 @@ export async function getStations(stationIds) {
   const res = handle401(await fetch(`${API_URL}/api/wmdrv2/batch/?${params}`, { credentials: "include" }));
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.detail || `API request failed: ${res.status}`);
+    throw new Error(backendMessage(data.detail) || translate("api.requestFailed", { status: res.status }));
   }
   return data;
 }
@@ -67,7 +69,7 @@ export async function saveStationsBatch(updates, { dryRun = false } = {}) {
   }));
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(data.detail || data.error || `API request failed: ${res.status}`);
+    throw new Error(backendMessage(data.detail || data.error) || translate("api.requestFailed", { status: res.status }));
   }
   return data;
 }
@@ -75,7 +77,7 @@ export async function saveStationsBatch(updates, { dryRun = false } = {}) {
 export async function listMyStations() {
   const res = handle401(await fetch(`${API_URL}/api/my_stations/`, { credentials: "include" }));
   if (!res.ok) {
-    throw new Error(`API request failed: ${res.status}`);
+    throw new Error(translate("api.requestFailed", { status: res.status }));
   }
   return res.json();
 }
@@ -85,7 +87,7 @@ export async function listMyIssuers() {
     credentials: "include",
   }));
   if (!res.ok) {
-    throw new Error(`API request failed: ${res.status}`);
+    throw new Error(translate("api.requestFailed", { status: res.status }));
   }
   return res.json();
 }
@@ -98,7 +100,7 @@ export async function checkWigosIdentifiers(ids) {
     credentials: "include",
   }));
   if (!res.ok) {
-    throw new Error(`API request failed: ${res.status}`);
+    throw new Error(translate("api.requestFailed", { status: res.status }));
   }
   return res.json();
 }
@@ -134,7 +136,7 @@ export async function retryPublication(stationId) {
 export async function getCodelist(scheme) {
   const res = await fetch(`${API_URL}/api/codelists/${scheme}.csv`, { credentials: "include" });
   if (!res.ok) {
-    throw new Error(`Failed to load codelist ${scheme}: ${res.status}`);
+    throw new Error(translate("api.codelistFailed", { scheme, status: res.status }));
   }
   const text = await res.text();
   return parseCsv(text)

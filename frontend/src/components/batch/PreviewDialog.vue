@@ -1,4 +1,6 @@
 <script setup>
+import { translate } from "../../i18n/plain";
+import { backendMessage } from "../../i18n/backendMessages";
 import { computed } from "vue";
 
 // Lists the changes per station with the frontend schema check and the
@@ -10,6 +12,12 @@ const props = defineProps({
   dryRun: { type: Object, required: true },
 });
 const emit = defineEmits(["confirm", "back"]);
+
+// The dry run reports its rejections in English prose from the API (D9).
+const failureText = (stationId) => {
+  const message = props.dryRun.byStation?.[stationId]?.message;
+  return backendMessage(message) ?? message;
+};
 
 const show = (value) => (value === undefined ? "—" : JSON.stringify(value));
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
@@ -25,11 +33,11 @@ const canConfirm = computed(
 );
 const failureSummary = computed(() =>
   [
-    schemaFailures.value && `${schemaFailures.value} failing the schema check`,
-    dryRunFailures.value && `${dryRunFailures.value} rejected by the server`,
+    schemaFailures.value && translate("preview.failingSchema", { count: schemaFailures.value }),
+    dryRunFailures.value && translate("preview.rejectedByServer", { count: dryRunFailures.value }),
   ]
     .filter(Boolean)
-    .join(", ")
+    .join(translate("common.listSeparator"))
 );
 </script>
 
@@ -37,33 +45,33 @@ const failureSummary = computed(() =>
   <v-dialog :model-value="true" max-width="960" scrollable @update:model-value="(open) => !open && emit('back')">
     <v-card>
       <v-card-title class="d-flex align-center">
-        <span>Review changes</span>
+        <span>{{ translate("preview.title") }}</span>
         <v-spacer />
-        <v-btn icon="mdi-close" variant="text" size="small" aria-label="Close" @click="emit('back')" />
+        <v-btn icon="mdi-close" variant="text" size="small" :aria-label="translate('common.close')" @click="emit('back')" />
       </v-card-title>
       <v-divider />
       <v-card-text>
         <p class="batch-intro">
-          {{ plural(changes.length, "station", "stations") }} will be changed<template v-if="unchangedCount > 0"
-            >, {{ plural(unchangedCount, "unchanged station is", "unchanged stations are") }} not sent</template
-          >.
+          {{ translate(changes.length === 1 ? "preview.willChangeOne" : "preview.willChangeMany", { count: changes.length }) }}<template v-if="unchangedCount > 0"
+            >{{ translate(unchangedCount === 1 ? "preview.unchangedOne" : "preview.unchangedMany", { count: unchangedCount }) }}</template
+          >
         </p>
 
         <v-alert v-if="dryRun.status === 'running'" class="mb-3" type="info" variant="tonal" density="compact">
-          Checking the changes on the server…
+          {{ translate("preview.checking") }}
         </v-alert>
         <v-alert v-if="dryRun.status === 'error'" class="mb-3" type="error" variant="tonal" density="compact">
-          The server check failed: {{ dryRun.error }}
+          {{ translate("preview.checkFailed", { message: dryRun.error }) }}
         </v-alert>
         <v-alert v-if="failureSummary" class="mb-3" type="error" variant="tonal" density="compact">
-          Fix the stations marked below before confirming ({{ failureSummary }}).
+          {{ translate("preview.fixMarked", { summary: failureSummary }) }}
         </v-alert>
 
         <div class="preview-list">
           <div v-for="change in changes" :key="change.stationId" class="preview-station">
             <div class="preview-station-header">
               <span>
-                <strong>{{ change.name || `Station ${change.stationId}` }}</strong>
+                <strong>{{ change.name || translate("batch.stationNumber", { id: change.stationId }) }}</strong>
                 <span class="preview-wsi">{{ change.wsi }}</span>
               </span>
               <span class="preview-badges">
@@ -73,9 +81,9 @@ const failureSummary = computed(() =>
                   :color="change.schemaErrors.length ? 'error' : 'success'"
                   :prepend-icon="change.schemaErrors.length ? 'mdi-close' : 'mdi-check'"
                 >
-                  schema
+                  {{ translate("preview.badgeSchema") }}
                 </v-chip>
-                <v-chip v-if="dryRun.status === 'running'" size="small" variant="tonal">server…</v-chip>
+                <v-chip v-if="dryRun.status === 'running'" size="small" variant="tonal">{{ translate("preview.badgeServerPending") }}</v-chip>
                 <v-chip
                   v-if="dryRun.byStation?.[change.stationId]"
                   size="small"
@@ -83,7 +91,7 @@ const failureSummary = computed(() =>
                   :color="dryRun.byStation[change.stationId].status === 'ok' ? 'success' : 'error'"
                   :prepend-icon="dryRun.byStation[change.stationId].status === 'ok' ? 'mdi-check' : 'mdi-close'"
                 >
-                  server
+                  {{ translate("preview.badgeServer") }}
                 </v-chip>
               </span>
             </div>
@@ -104,7 +112,7 @@ const failureSummary = computed(() =>
               v-if="dryRun.byStation?.[change.stationId] && dryRun.byStation[change.stationId].status !== 'ok'"
               class="text-error mt-2"
             >
-              {{ dryRun.byStation[change.stationId].message }}
+              {{ failureText(change.stationId) }}
               <ul v-if="dryRun.byStation[change.stationId].errors?.length > 0" class="error-list">
                 <li v-for="error in dryRun.byStation[change.stationId].errors" :key="error">{{ error }}</li>
               </ul>
@@ -114,9 +122,9 @@ const failureSummary = computed(() =>
       </v-card-text>
       <v-divider />
       <v-card-actions class="justify-end">
-        <v-btn variant="outlined" @click="emit('back')">Back to editing</v-btn>
+        <v-btn variant="outlined" @click="emit('back')">{{ translate("preview.backToEditing") }}</v-btn>
         <v-btn color="primary" variant="flat" :disabled="!canConfirm" @click="emit('confirm')">
-          Confirm and save {{ plural(changes.length, "station", "stations") }}
+          {{ translate(changes.length === 1 ? "preview.confirmOne" : "preview.confirmMany", { count: changes.length }) }}
         </v-btn>
       </v-card-actions>
     </v-card>

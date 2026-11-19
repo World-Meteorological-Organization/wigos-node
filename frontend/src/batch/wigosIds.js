@@ -1,4 +1,5 @@
 import { KEY_COLUMNS, applyRowsWith, makeRow, setOrDelete, stationKeys } from "./common";
+import { translate } from "../i18n/plain";
 
 // WIGOS identifiers: one row per station. The current primary ID is shown
 // read-only; a new primary is entered beside it (empty keeps the current one).
@@ -10,10 +11,10 @@ export const MAX_ADDITIONAL_IDS = 3;
 const ADDITIONAL_KEYS = Array.from({ length: MAX_ADDITIONAL_IDS }, (_, i) => `additional_id_${i + 1}`);
 
 export const columns = [
-  { ...KEY_COLUMNS.wigosId, key: "old_wigos_id", label: "Current WIGOS ID" },
+  { ...KEY_COLUMNS.wigosId, key: "old_wigos_id", label: "col.currentWigosId" },
   KEY_COLUMNS.stationName,
-  { key: "new_wigos_id", label: "New WIGOS ID (empty: keep)", kind: "wsi", width: 200 },
-  ...ADDITIONAL_KEYS.map((key, i) => ({ key, label: `Additional ID ${i + 1}`, kind: "wsi", width: 190 })),
+  { key: "new_wigos_id", label: "col.newWigosIdEmptyKeep", kind: "wsi", width: 200 },
+  ...ADDITIONAL_KEYS.map((key, i) => ({ key, label: "col.additionalId", labelParams: { index: i + 1 }, kind: "wsi", width: 190 })),
 ];
 
 // A file row is matched to a grid row on the current ID.
@@ -58,5 +59,5 @@ export const ownIdsInRows = (rows) =>
 // Shown on a station's row when it has IDs beyond the editable slots.
 export const rowNote = (row) =>
   row.extraAdditionalIds?.length
-    ? `Also has ${row.extraAdditionalIds.join(", ")} (kept as is; only ${MAX_ADDITIONAL_IDS} additional IDs are editable here)`
+    ? translate("wigos.extraIds", { ids: row.extraAdditionalIds.join(", "), max: MAX_ADDITIONAL_IDS })
     : null;

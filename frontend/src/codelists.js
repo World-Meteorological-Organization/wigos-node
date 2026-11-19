@@ -3,21 +3,23 @@ import { getCodelist } from "./api";
 // Codelists (static files served by the backend, api/codelists/) behind each
 // concept field: a scheme name for a single list, or labelled schemes for a
 // field whose concepts come from several lists, shown as option groups.
+// The labels are message keys (translated where the groups are rendered), so
+// the option-group headings follow the UI language.
 export const CODELISTS = {
   observedProperty: [
-    { scheme: "ObservedVariableAtmosphere", label: "Atmosphere" },
-    { scheme: "ObservedVariableOcean", label: "Ocean" },
-    { scheme: "ObservedVariableTerrestrial", label: "Terrestrial" },
-    { scheme: "ObservedVariableOuterSpace", label: "Outer space" },
-    { scheme: "ObservedVariableEarth", label: "Earth" },
+    { scheme: "ObservedVariableAtmosphere", label: "opt.atmosphere" },
+    { scheme: "ObservedVariableOcean", label: "opt.ocean" },
+    { scheme: "ObservedVariableTerrestrial", label: "opt.terrestrial" },
+    { scheme: "ObservedVariableOuterSpace", label: "opt.outerSpace" },
+    { scheme: "ObservedVariableEarth", label: "opt.earth" },
   ],
   observedGeometry: "Geometry",
   programAffiliation: "ProgramAffiliation",
   reportingStatus: "ReportingStatus",
   observingMethod: [
-    { scheme: "ObservingMethodAtmosphere", label: "Atmosphere" },
-    { scheme: "ObservingMethodOcean", label: "Ocean" },
-    { scheme: "ObservingMethodTerrestrial", label: "Terrestrial" },
+    { scheme: "ObservingMethodAtmosphere", label: "opt.atmosphere" },
+    { scheme: "ObservingMethodOcean", label: "opt.ocean" },
+    { scheme: "ObservingMethodTerrestrial", label: "opt.terrestrial" },
   ],
   operatingStatus: "InstrumentOperatingStatus",
   sourceOfObservation: "SourceOfObservation",
@@ -32,15 +34,26 @@ export function loadCodelist(spec) {
   return Promise.all(
     spec.map(({ scheme, label }) =>
       getCodelist(scheme)
-        .then((options) => ({ label, options: sortByLabel(options) }))
-        .catch(() => ({ label, options: [] }))
+        // `scheme` rides along so the group's option names can be shown in
+        // the UI language (see codelistText).
+        .then((options) => ({ label, scheme, options: sortByLabel(options) }))
+        .catch(() => ({ label, scheme, options: [] }))
     )
   );
 }
 
-// `options` for a single list, `groups` for several.
+// `options` for a single list, `groups` for several, `scheme` for whichever
+// list the labels should be read from (a field drawing on several lists is
+// grouped, and ConceptField translates each group's options one by one, so a
+// single scheme would be wrong there — it is only set for the simple case).
 export const codelistProps = (name, codelists) =>
-  typeof CODELISTS[name] === "string" ? { options: codelists[name] } : { groups: codelists[name] };
+  typeof CODELISTS[name] === "string"
+    ? { options: codelists[name], scheme: CODELISTS[name] }
+    : { groups: codelists[name] };
+
+// The codelist a field reads from, when it reads from just one. Null for a
+// field drawing on several lists, whose option groups carry their own scheme.
+export const codelistScheme = (name) => (typeof CODELISTS[name] === "string" ? CODELISTS[name] : null);
 
 // Every entry of a codelist, flattening option groups.
 export const codelistOptions = (name, codelists) => {

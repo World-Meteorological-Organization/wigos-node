@@ -1,8 +1,9 @@
 <script setup>
+import { columnLabel, translate } from "../../i18n/plain";
 import { computed, ref, watch } from "vue";
 import { cellState, codelistLabel, isCellChanged, isCellEditable, isEditable, normalizeCell } from "../../batch/common";
 import { exportSheet, mergeSheet, pastedTable, readSheet } from "../../batch/sheetIO";
-import { codelistOptions } from "../../codelists";
+import { codelistOptions, codelistScheme } from "../../codelists";
 import SheetCellEditor from "./SheetCellEditor.vue";
 import SheetFillInput from "./SheetFillInput.vue";
 
@@ -74,7 +75,9 @@ watch(
 );
 
 const displayValue = (column, value) =>
-  column.kind === "codelist" && value ? codelistLabel(codelistOptions(column.codelist, props.codelists), value) : value;
+  column.kind === "codelist" && value
+    ? codelistLabel(codelistOptions(column.codelist, props.codelists), value, codelistScheme(column.codelist))
+    : value;
 
 // updates: [{ rowId, key, value }]; values are normalized here. An added row
 // is re-synced with the operation (e.g. moved to the observation it names).
@@ -153,7 +156,7 @@ function handlePaste(e) {
   // Whole rows are matched to the grid rows like an import.
   const table = pastedTable(text, props.sheet);
   if (table) {
-    mergeTable(table, "Pasted rows");
+    mergeTable(table, translate("sheet.pastedRows"));
     return;
   }
   const lines = text.replace(/\r?\n$/, "").split(/\r?\n/);
@@ -203,7 +206,7 @@ async function handleImport(file) {
   try {
     mergeTable(await readSheet(file), file.name);
   } catch (err) {
-    importState.value = { status: "done", file: file.name, report: { error: `Couldn't read the file: ${err.message}` } };
+    importState.value = { status: "done", file: file.name, report: { error: translate("sheet.readFailed", { message: err.message }) } };
   }
 }
 
@@ -258,11 +261,11 @@ function cellClasses(column, state, isActive) {
 function cellTitle(row, column, state) {
   return (
     [
-      isEditable(column) && !state.editable ? "Identifies this row; it can only be set on added rows" : null,
+      isEditable(column) && !state.editable ? translate("sheet.keyCellHint") : null,
       state.error,
       state.hint,
-      state.changed ? `Was: ${displayValue(column, row.original[column.key] ?? "") || "(empty)"}` : null,
-      column.kind === "codelist" && state.value ? `Notation: ${state.value}` : null,
+      state.changed ? translate("sheet.was", { value: displayValue(column, row.original[column.key] ?? "") || translate("batch.emptyOption") }) : null,
+      column.kind === "codelist" && state.value ? translate("sheet.notation", { value: state.value }) : null,
     ]
       .filter(Boolean)
       .join("\n") || undefined
@@ -285,6 +288,23 @@ function onCellDblclick(ri, ci) {
   if (state.editable) editing.value = { value: state.value };
 }
 
+// The one-line summary of an import: "2 rows matched, 4 cells changed" and,
+// when rows were added, ", 1 row added". Each part is its own pluralised
+// message; they are joined with the separator the language uses for a list
+// (English ", ", Chinese "，"), rather than with a comma hard-coded into the
+// template, which read as "2 rows matched,  4" and would be wrong in Chinese.
+const reportLine = computed(() => {
+  const report = importState.value?.report;
+  if (!report) return "";
+  const plural = (one, many, count) => translate(count === 1 ? one : many, { count });
+  const parts = [
+    plural("sheet.reportMatchedOne", "sheet.reportMatchedMany", report.matched),
+    plural("sheet.reportChangedOne", "sheet.reportChangedMany", report.changedCells),
+  ];
+  if (report.added > 0) parts.push(plural("sheet.reportAddedOne", "sheet.reportAddedMany", report.added));
+  return `${parts.join(translate("sheet.reportSeparator"))}.`;
+});
+
 const importWarning = computed(() => {
   const report = importState.value?.report;
   return !!report && !report.error && (report.unmatched.length > 0 || report.unknownHeaders.length > 0);
@@ -298,17 +318,17 @@ const importWarning = computed(() => {
         v-model="filter"
         class="sheet-filter"
         type="search"
-        placeholder="Filter rows…"
+        :placeholder="translate('sheet.filterPlaceholder')"
         prepend-inner-icon="mdi-magnify"
-        aria-label="Filter rows by station, WIGOS ID or observed property"
+        :aria-label="translate('sheet.filterAria')"
         hide-details
       />
       <slot name="actions" />
       <v-spacer />
-      <v-btn variant="text" :disabled="!activeChanged" @click="resetCell">Reset cell</v-btn>
-      <v-btn variant="text" :disabled="!anyChanged" @click="resetAll">Reset all</v-btn>
+      <v-btn variant="text" :disabled="!activeChanged" @click="resetCell">{{ translate("sheet.resetCell") }}</v-btn>
+      <v-btn variant="text" :disabled="!anyChanged" @click="resetAll">{{ translate("sheet.resetAll") }}</v-btn>
       <v-btn variant="tonal" color="secondary" prepend-icon="mdi-upload" @click="fileInput?.click()">
-        Import CSV/Excel
+        {{ translate("sheet.import") }}
       </v-btn>
       <input
         ref="fileInput"
@@ -318,15 +338,15 @@ const importWarning = computed(() => {
         @change="onFileChosen"
       />
       <v-btn variant="tonal" color="secondary" prepend-icon="mdi-download" @click="exportSheet(columns, rows, 'csv', exportName)">
-        Export CSV
+        {{ translate("sheet.exportCsv") }}
       </v-btn>
       <v-btn variant="tonal" color="secondary" prepend-icon="mdi-download" @click="exportSheet(columns, rows, 'xlsx', exportName)">
-        Export Excel
+        {{ translate("sheet.exportExcel") }}
       </v-btn>
     </div>
 
     <v-alert v-if="importState?.status === 'loading'" class="mb-3" type="info" variant="tonal" density="compact">
-      Importing…
+      {{ translate("sheet.importing") }}
     </v-alert>
     <v-alert
       v-else-if="importState?.status === 'done'"
@@ -339,21 +359,20 @@ const importWarning = computed(() => {
     >
       <template v-if="importState.report.error">{{ importState.file }}: {{ importState.report.error }}</template>
       <template v-else>
-        <strong>{{ importState.file }}</strong>: {{ importState.report.matched }} rows matched,
-        {{ importState.report.changedCells }} cells changed<template v-if="importState.report.added > 0"
-          >, {{ importState.report.added }} rows added</template
-        >.
+        <strong>{{ importState.file }}</strong>: {{ reportLine }}
         <div v-if="importState.report.restored > 0">
-          {{ importState.report.restored }}
-          {{ importState.report.restored === 1 ? "cell was" : "cells were" }} kept as they were: Excel had reformatted
-          them (e.g. 12-12 as 12-Dec, or a long number as 3.2E+11). Use Export Excel to edit in Excel without this.
+          {{ translate(importState.report.restored === 1 ? "sheet.reportKeptOne" : "sheet.reportKeptMany", { count: importState.report.restored }) }}
         </div>
         <div v-if="importState.report.unmatched.length > 0">
-          {{ importState.report.unmatched.length }} rows not matched to a station in this batch and ignored:
+          {{
+            translate(importState.report.unmatched.length === 1 ? "sheet.reportUnmatchedOne" : "sheet.reportUnmatchedMany", {
+              count: importState.report.unmatched.length,
+            })
+          }}
           {{ importState.report.unmatched.slice(0, 10).join(", ") }}{{ importState.report.unmatched.length > 10 ? "…" : "" }}
         </div>
         <div v-if="importState.report.unknownHeaders.length > 0">
-          Unknown columns ignored: {{ importState.report.unknownHeaders.join(", ") }}
+          {{ translate("sheet.reportUnknownHeaders") }} {{ importState.report.unknownHeaders.join(", ") }}
         </div>
       </template>
     </v-alert>
@@ -376,17 +395,17 @@ const importWarning = computed(() => {
         <thead>
           <tr>
             <th class="sheet-sticky sheet-check" style="left: 0">
-              <input type="checkbox" :checked="allVisibleSelected" aria-label="Select all rows" @change="toggleAll" />
+              <input type="checkbox" :checked="allVisibleSelected" :aria-label="translate('sheet.selectAllRows')" @change="toggleAll" />
             </th>
             <th
               v-for="column in columns"
               :key="column.key"
               :class="isEditable(column) ? '' : 'sheet-sticky sheet-key'"
               :style="isEditable(column) ? undefined : { left: `${stickyLeft[column.key]}px` }"
-              :title="column.lockedOnExisting ? `${column.key}\nIdentifies existing rows; set only on added rows` : column.key"
+              :title="column.lockedOnExisting ? `${column.key}\n${translate('sheet.lockedColumnHint')}` : column.key"
             >
               <v-icon v-if="column.lockedOnExisting" icon="mdi-lock-outline" size="x-small" class="sheet-lock" />
-              {{ column.label }}<span v-if="column.required" class="required-mark">*</span>
+              {{ columnLabel(column) }}<span v-if="column.required" class="required-mark">*</span>
             </th>
           </tr>
           <tr v-if="selectedIds.size > 0" class="sheet-fill-row">
@@ -397,7 +416,7 @@ const importWarning = computed(() => {
               </th>
               <th v-else class="sheet-sticky sheet-key" :style="{ left: `${stickyLeft[column.key]}px` }">
                 <span v-if="column === keyColumns[keyColumns.length - 1]" class="sheet-fill-label">
-                  Fill {{ selectedIds.size }} selected →
+                  {{ translate("sheet.fillSelected", { count: selectedIds.size }) }}
                 </span>
               </th>
             </template>
@@ -406,7 +425,7 @@ const importWarning = computed(() => {
         <tbody>
           <tr v-if="visibleRows.length === 0">
             <td :colspan="columns.length + 1" class="sheet-empty">
-              {{ rows.length ? "No rows match the filter." : "Nothing to edit for the selected stations." }}
+              {{ rows.length ? translate("sheet.noMatch") : translate("sheet.nothingToEdit") }}
             </td>
           </tr>
           <tr
@@ -418,7 +437,7 @@ const importWarning = computed(() => {
               <input
                 type="checkbox"
                 :checked="selectedIds.has(row.id)"
-                :aria-label="`Select row ${row.id}`"
+                :aria-label="translate('sheet.selectRow', { id: row.id })"
                 @change="toggleRow(row.id)"
               />
             </td>
@@ -457,11 +476,12 @@ const importWarning = computed(() => {
       </table>
     </div>
     <div class="sheet-help">
-      Click a cell and type to edit; Enter or Tab confirms, Esc cancels. Paste a block copied from Excel to fill from the
-      selected cell; whole rows (all columns, or with the header) are matched to their rows like an import instead.
-      <v-icon icon="mdi-lock-outline" size="x-small" /> cells identify existing rows and can only be set on added rows.
-      Lists are separated by ";".
-      <template v-if="filter"> Showing {{ visibleRows.length }} of {{ rows.length }} rows.</template>
+      {{ translate("sheet.help") }}
+      <v-icon icon="mdi-lock-outline" size="x-small" /> {{ translate("sheet.helpLock") }}
+      {{ translate("sheet.helpLists") }}
+      <template v-if="filter">
+        {{ translate("sheet.helpShowing", { visible: visibleRows.length, total: rows.length }) }}
+      </template>
     </div>
   </div>
 </template>

@@ -1,12 +1,30 @@
 <script setup>
 import { computed, onUnmounted, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { listPublications } from "./api";
 import LoginPage from "./components/LoginPage.vue";
 import PublicationsPage from "./components/PublicationsPage.vue";
 import StationsList from "./components/StationsList.vue";
 import WmdrForm from "./components/WmdrForm.vue";
 import BatchWizard from "./components/batch/BatchWizard.vue";
+import LocaleSwitcher from "./components/LocaleSwitcher.vue";
 import { useAuth } from "./composables/useAuth";
+import { useLocale } from "./composables/useLocale";
+
+const { t } = useI18n();
+const { pending, active } = useLocale();
+
+// The tab title follows the language too; index.html carries the English one
+// for the moment before the app mounts. `lang` matters beyond the title: screen
+// readers pick their pronunciation from it, and so do :lang() CSS rules.
+watch(
+  active,
+  () => {
+    document.title = t("app.title");
+    document.documentElement.lang = active.value;
+  },
+  { immediate: true }
+);
 
 const { status, user, setUser, logout } = useAuth();
 
@@ -17,8 +35,8 @@ const selected = ref(new Set());
 
 // The sidebar is for the main pages; the form and the wizard have their own way out.
 const NAV_ITEMS = [
-  { mode: "list", title: "Stations", icon: "mdi-map-marker-multiple" },
-  { mode: "publications", title: "Publishing", icon: "mdi-history" },
+  { mode: "list", titleKey: "nav.stations", icon: "mdi-map-marker-multiple" },
+  { mode: "publications", titleKey: "nav.publishing", icon: "mdi-history" },
 ];
 const showNav = computed(() => status.value === "authenticated" && NAV_ITEMS.some((item) => item.mode === view.value.mode));
 // null: open on large screens, closed on small ones (Vuetify's default)
@@ -67,13 +85,21 @@ async function handleLogout() {
       </template>
       <img class="app-bar-logo" src="./assets/img/logo.png" alt="WMO logo" />
       <div class="app-bar-title">
-        <h1>WMDR Station Record Builder</h1>
+        <h1>{{ t("app.title") }}</h1>
         <!-- On narrower screens it would run into the dark part of the banner. -->
-        <p class="d-none d-lg-block">Fill in station metadata and generate a WMDRv2 conformant record.</p>
+        <p class="d-none d-lg-block">{{ t("app.subtitle") }}</p>
       </div>
-      <template v-if="status === 'authenticated'" #append>
-        <span class="app-bar-user mr-3">{{ user.email || user.username }}</span>
-        <v-btn class="app-bar-user" variant="tonal" @click="handleLogout">Log out</v-btn>
+      <template #append>
+        <div class="app-bar-actions">
+          <div v-if="status === 'authenticated'" class="app-bar-account">
+            <span class="app-bar-user">{{ user.email || user.username }}</span>
+            <v-divider vertical class="app-bar-account-divider" aria-hidden="true" />
+            <v-btn class="app-bar-user" variant="tonal" @click="handleLogout">{{ t("app.logout") }}</v-btn>
+          </div>
+          <div class="app-bar-locale">
+            <LocaleSwitcher />
+          </div>
+        </div>
       </template>
     </v-app-bar>
 
@@ -85,7 +111,7 @@ async function handleLogout() {
         <v-list-item
           v-for="item in NAV_ITEMS"
           :key="item.mode"
-          :title="item.title"
+          :title="t(item.titleKey)"
           :prepend-icon="item.icon"
           :active="view.mode === item.mode"
           color="primary"
@@ -100,7 +126,11 @@ async function handleLogout() {
 
     <v-main>
       <v-container :class="['app-main', { 'app-main-wide': view.mode === 'batch' }]">
-        <p v-if="status === 'loading'">Loading…</p>
+        <v-alert v-if="pending" class="mb-4" type="info" variant="tonal" density="compact" data-testid="locale-pending">
+          {{ t("locale.pendingNotice", { language: pending }) }}
+        </v-alert>
+
+        <p v-if="status === 'loading'">{{ t("app.loading") }}</p>
 
         <LoginPage v-else-if="status === 'anonymous'" @success="setUser" />
 
@@ -175,6 +205,24 @@ async function handleLogout() {
 .app-bar-user {
   color: #fff;
   text-shadow: 0 0 4px rgba(0, 58, 120, 0.9);
+}
+
+.app-bar-actions,
+.app-bar-account {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.app-bar-account-divider {
+  border-color: rgba(255, 255, 255, 0.6);
+  opacity: 1;
+  height: 28px;
+}
+
+.app-bar-locale {
+  border-left: 1px solid rgba(255, 255, 255, 0.6);
+  padding-left: 1rem;
 }
 
 .app-footer {

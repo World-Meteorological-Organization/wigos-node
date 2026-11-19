@@ -1,4 +1,5 @@
 import { parseCsvRows, toCsv } from "../csv";
+import { canonical, columnLabel, translate } from "../i18n/plain";
 import { isCellEditable, isEditable, isSpreadsheetRendering, normalizeCell } from "./common";
 
 // CSV / Excel export and import of a batch grid. Files have one column per
@@ -84,7 +85,10 @@ export function mergeSheet(table, sheet, rows, codelists) {
   const byName = new Map();
   columns.forEach((column) => {
     byName.set(column.key.toLowerCase(), column);
-    byName.set(column.label.toLowerCase(), column);
+    // A file exported from a UI in another language names the columns in that
+    // language, so both the active language and English are accepted.
+    byName.set(columnLabel(column).toLowerCase(), column);
+    byName.set(canonical(column.label).toLowerCase(), column);
   });
   const fileColumns = header.map((name) => byName.get(String(name).trim().toLowerCase()) || null);
   const report = {
@@ -102,7 +106,13 @@ export function mergeSheet(table, sheet, rows, codelists) {
   const missing = importKeys.filter((key) => indexOf(key) < 0);
   if (missing.length) {
     const names = missing.map((key) => `"${key}"`).join(", ");
-    return { rows, report: { ...report, error: `The file needs the ${names} ${missing.length === 1 ? "column" : "columns"} to match its rows to the grid.` } };
+    return {
+      rows,
+      report: {
+        ...report,
+        error: translate(missing.length === 1 ? "sheet.missingColumn" : "sheet.missingColumns", { columns: names }),
+      },
+    };
   }
 
   // Keys compare trimmed and case-insensitively; codelist keys by notation.
@@ -188,7 +198,7 @@ export function mergeSheet(table, sheet, rows, codelists) {
     let filled = { ...row, cells: { ...row.cells, ...writable(row, values) } };
     if (syncNewRow) filled = syncNewRow(filled);
     if (!filled) {
-      report.unmatched.push(`${description} (not an observation of this station)`);
+      report.unmatched.push(translate("sheet.notAnObservation", { description }));
       return;
     }
     const lastOf = (same) => next.reduce((index, r, i) => (same(r) ? i : index), -1);
@@ -216,7 +226,7 @@ export function pastedTable(text, sheet) {
   const header = new Set(lines[0].map((cell) => cell.trim().toLowerCase()));
   const named = (key) => {
     const column = columns.find((col) => col.key === key);
-    return header.has(key.toLowerCase()) || header.has(column.label.toLowerCase());
+    return header.has(key.toLowerCase()) || header.has(columnLabel(column).toLowerCase()) || header.has(canonical(column.label).toLowerCase());
   };
   if (importKeys.every(named)) return lines;
   if (lines.every((cells) => cells.length === columns.length)) return [columns.map((column) => column.key), ...lines];
